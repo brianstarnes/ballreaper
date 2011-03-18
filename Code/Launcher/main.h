@@ -87,8 +87,8 @@ enum encoderThresholds
 
 typedef enum
 {
-	MOTOR_INNER = 0, //!< The drive motor that is always on the inside of the course.
-	MOTOR_WALL = 2 //!< The drive motor that always runs along the wall.
+	MOTOR_INNER = 1, //!< The drive motor that is always on the inside of the course.
+	MOTOR_WALL = 0 //!< The drive motor that always runs along the wall.
 } motor_t;
 
 //wall motor is stronger/faster

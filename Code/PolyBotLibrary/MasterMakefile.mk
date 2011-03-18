@@ -6,7 +6,7 @@
 #    In XP: Right-click My Computer, click "Properties" then navigate to the "Hardware" tab followed by clicking "Device Manager".
 #    Scroll down to "Ports" and click the "+" to the left of the name. Finally read the "COM" number next to the name "USB Serial Port (COMx)".
 #  For a FTDI USB-to-UART converter on Linux this is something like /dev/ttyUSB0 (for a listing of USB serial ports, run: ls /dev/ttyUSB* ).
-PORT = COM5
+PORT = /dev/ttyUSB0
 
 # Specify the type of In-System Programmer (ISP) device or cable you are using.
 #  For a standard FTDI USB-to-UART converter used with Seng's butterfly bootloader use butterfly -b 57600

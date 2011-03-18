@@ -11,7 +11,7 @@ LIB = ../PolyBotLibrary
 # This affects which library files get compiled, as well as which functions are enabled.
 USE_LCD    = 1
 USE_ADC    = 1
-NUM_MOTORS = 3
+NUM_MOTORS = 2
 NUM_SERVOS = 4
 
 
