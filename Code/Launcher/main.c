@@ -18,8 +18,6 @@ static volatile u08 rightEncoderState;
 static volatile u16 leftEncoderReading;
 static volatile u16 rightEncoderReading;
 
-volatile unsigned long icount;
-
 //local prototypes
 void mainMenu();
 void runCompetition();
@@ -35,6 +33,8 @@ void strafeRight();
 void driveForward();
 void driveBackward();
 void turnLeft();
+void turnRight();
+void stop();
 void scraperDown();
 void scraperUp();
 
@@ -136,69 +136,121 @@ void mainMenu()
 			break;
 	}
 }
-
+/************************************************************************************************/
 //! Runs the competition code.
 void runCompetition()
 {
-	printString_P(PSTR("RunCompetition"));
+	u08 rearSideWallHit = 0;
+	u08 frontSideWallHit = 0;
+	u08 refills = 0;
 
+	clearScreen();
 	lowerLine();
 	printString_P(PSTR("Drive forward"));
 
-	//drive until at least one of the side wall switches hits
-	u08 rearSideWallHit = 0;
-	u08 frontSideWallHit = 0;
-	/*while (rearSideWallHit && frontSideWallHit)
-	{
-		driveForward();
-		printEncoderTicks();
-		rearSideWallHit = digitalInput(SWITCH_SIDE_WALL_REAR);
-		frontSideWallHit = digitalInput(SWITCH_SIDE_WALL_FRONT);
-	}*/
-
-	u16 i = 0;
-	//ensure that both side wall switches are depressed
-	printString_P(PSTR("MOO"));
-	while(1)
+	//drive until at least the side wall switches hit
+	while(!rearSideWallHit && !frontSideWallHit)
 	{
 		driveForward();
 
-		if (rearSideWallHit && frontSideWallHit)
-		{
-			break;
-		}
 		delayMs(1);
-		rearSideWallHit = !digitalInput(SWITCH_SIDE_WALL_REAR);
-		frontSideWallHit = !digitalInput(SWITCH_SIDE_WALL_FRONT);
+		rearSideWallHit =  REAR_SIDE_WALL_HIT;
+		frontSideWallHit = FRONT_SIDE_WALL_HIT;
 	}
 
-	clearScreen();
-	if (i >= 1000)
-	{
-		haltRobot();
-		lowerLine();
-		printString_P(PSTR("didn't hit wall"));
-		buttonWait();
-		return;
-	}
-
+	// Hit wall so turn left
 	clearScreen();
 	printString_P(PSTR("Turn Left"));
-	leftEncoderTicks = 0;
-	rightEncoderTicks = 0;
 
-	turnLeft();
-	while(leftEncoderTicks < 20 && rightEncoderTicks < 20);
+	leftEncoderTicks = 0;
+    rightEncoderTicks = 0;
+
+    turnLeft();
+
+	// Turn left 90 degrees
+	while(leftEncoderTicks < 25 && rightEncoderTicks < 25);
+	stop();
 
 	launcherSpeed(180);
 
-	while (1)
+	// Start Ball Reaping!
+    while (refills < 2)
 	{
-		scraperDown();
+		stop();
+    	scraperDown();
+
+    	// Start driving forward to pick balls up
+    	clearScreen();
+        printString_P(PSTR("Drive forward"));
 		driveForward();
+		while(!FRONT_HIT);
+
+		stop();
 		scraperUp();
+
+    	// Start driving backwards to get a refill
+    	clearScreen();
+        printString_P(PSTR("Drive backwards"));
 		driveBackward();
+		while(!BACK_RIGHT_HIT || !BACK_LEFT_HIT);
+		refills++;
 	}
+
+	// Done, declare domination!
+	stop();
+	clearScreen();
+	printString_P(PSTR("  Dominated!!"));
+	lowerLine();
+	printString_P(PSTR("ReapedYourBalls"));
+    while(1);
+
+} // End competition
+/************************************************************************************************/
+
+void launcherSpeed(u08 speed)
+{
+	servo(SERVO_LEFT_LAUNCHER, speed);
+	servo(SERVO_RIGHT_LAUNCHER, speed);
+}
+
+void driveForward()
+{
+	motor(MOTOR_WALL, 30);
+	motor(MOTOR_INNER, 30);
+}
+
+void driveBackward()
+{
+	motor(MOTOR_WALL, -30);
+	motor(MOTOR_INNER, -30);
+}
+
+void turnLeft()
+{
+	motor(MOTOR_WALL, 40);
+	motor(MOTOR_INNER, -40);
+}
+
+void turnRight()
+{
+	motor(MOTOR_WALL, -40);
+	motor(MOTOR_INNER, 40);
+}
+
+void stop()
+{
+	motor(MOTOR_WALL, 0);
+	motor(MOTOR_INNER, 0);
+}
+
+void scraperDown()
+{
+	servo(SERVO_SCRAPER, 0);
+}
+
+void scraperUp()
+{
+	servo(SERVO_SCRAPER, 200);
 }
 
 //! Test Mode pages.
@@ -382,64 +434,6 @@ void printVoltage(u16 milliVolts)
 	printChar('V');
 }
 
-void launcherSpeed(u08 speed)
-{
-	servo(SERVO_LEFT_LAUNCHER, speed);
-	servo(SERVO_RIGHT_LAUNCHER, speed);
-}
-
-void strafeRight()
-{
-	motor(0, 55);
-	motor(1, 60);
-}
-
-void driveForward()
-{
-
-	motor(0, 55);
-	motor(1, 60);
-	/*if (!digitalInput(SWITCH_BACK_WALL_LEFT))
-	{
-		//motor(MOTOR_INNER, BASE_SPEED - 5);
-		//motor(MOTOR_WALL, BASE_SPEED + 5);
-	}
-	else
-	{
-		motor(0, 55);
-	}
-	if (!digitalInput(SWITCH_BACK_WALL_RIGHT))
-	{
-		motor(1, 60);
-	}
-	else
-	{
-		motor(0, 55);
-	}*/
-}
-
-void driveBackward()
-{
-	motor(0, 55);
-	motor(1, 60);
-}
-
-void turnLeft()
-{
-	motor(0, 50);
-	motor(1, 60);
-}
-
-void scraperDown()
-{
-	servo(SERVO_SCRAPER, 0);
-}
-
-void scraperUp()
-{
-	servo(SERVO_SCRAPER, 200);
-}
-
 //! Reads the voltage (in milliVolts) of the battery that powers the logic and servos, via a voltage divider.
 u16 readLogicBattery()
 {
@@ -463,7 +457,6 @@ u16 readMotorBattery()
 //! Interrupt service routine for counting wheel encoder ticks.
 ISR(TIMER0_COMPA_vect)
 {
-	icount++;
 	//read the wheel encoders (QRB-1114 reflective sensors)
 	leftEncoderReading = analog10(ANALOG_WHEEL_ENCODER_LEFT);
 	rightEncoderReading = analog10(ANALOG_WHEEL_ENCODER_RIGHT);

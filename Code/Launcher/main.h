@@ -36,6 +36,12 @@
 //! The voltage (in milliVolts) at which to turn off servos and anything else possible on the logic battery.
 #define LOGIC_BATTERY_VOLTAGE_CUTOFF 3000 * LOGIC_BATTERY_NUM_CELLS
 
+#define REAR_SIDE_WALL_HIT  !digitalInput(SWITCH_SIDE_WALL_REAR)
+#define FRONT_SIDE_WALL_HIT !digitalInput(SWITCH_SIDE_WALL_FRONT)
+#define FRONT_HIT           !digitalInput(SWITCH_FRONT_WALL)
+#define BACK_RIGHT_HIT      !digitalInput(SWITCH_BACK_WALL_RIGHT)
+#define BACK_LEFT_HIT       !digitalInput(SWITCH_BACK_WALL_LEFT)
+
 enum servos
 {
 	SERVO_SCRAPER, //!< The servo that raises/lowers the scraper arm used to collect balls from a trough.
@@ -87,8 +93,8 @@ enum encoderThresholds
 
 typedef enum
 {
-	MOTOR_INNER = 1, //!< The drive motor that is always on the inside of the course.
-	MOTOR_WALL = 0 //!< The drive motor that always runs along the wall.
+	MOTOR_WALL = 0, //!< The drive motor that always runs along the wall.
+	MOTOR_INNER = 1 //!< The drive motor that is always on the inside of the course.
 } motor_t;
 
 //wall motor is stronger/faster
