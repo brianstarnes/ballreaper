@@ -1,0 +1,6 @@
+switch 1: down to select R/C mode
+switch 2: up to select R/C mode
+switch 3: down to select lithium cutoff of 3.0V per cell. Number of detected cells is flashed out on the status LED.
+switch 4: down to disable mixed mode. We want to control the motors directly.
+switch 5: up to disable exponential response. We want linear response.
+switch 6: down to select microcontroller mode, so the motors will keep running even if the signal is lost.
