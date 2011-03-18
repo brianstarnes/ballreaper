@@ -44,6 +44,7 @@ void lcdOn();
 void lcdOff();
 void lcdInit();
 void printChar(const u08 data);
+void printCharN(const u08 data, const u08 times);
 void printString(const char *const string);
 void printString_P(PGM_P const string);
 void print_u08(const u08 number);

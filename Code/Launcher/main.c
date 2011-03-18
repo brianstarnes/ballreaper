@@ -40,7 +40,7 @@ void printEncoderTicks();
 void haltRobot();
 void downLink();
 
-
+//! Initializes PolyBotLibrary and timers, sends bootup packet, prints version.
 int main()
 {
 	initialize();
@@ -48,51 +48,64 @@ int main()
 	initPacketDriver();
 	sendBootNotification();
 
+	//enable timer0 (set prescaler to /256)
+	TCCR0B |= _BV(CS02);
+	//enable interrupt for timer0 output compare unit A
+	TIMSK0 |= _BV(OCIE0A);
+
+	//wait for button to be released, if it is already down from skipping bootloader
+	while (getButton1());
+	//print firmware version and wait for button press
+	printString_P(PSTR("ballReaper v" LAUNCHER_FIRMWARE_VERSION));
+	buttonWait();
+
 	while (1)
 	{
 		mainMenu();
 	}
 }
 
+//! Main Menu options.
+enum {
+	Option_RunCompetition,
+	Option_TestMode,
+	Option_PolyBotRemote,
+	NUM_Options
+};
+
+//! Displays the main menu and runs the option that the user selects with the knob.
 void mainMenu()
 {
-	const u08 numChoices = 3;
 	u08 choice;
 	u08 previousChoice = 255;
 
 	clearScreen();
-	//wait for button to be released, if it is already down
-	while (getButton1());
-	printString_P(PSTR("ballReaper v" LAUNCHER_FIRMWARE_VERSION));
-	buttonWait();
-
-	clearScreen();
+	printString_P(PSTR("Main Menu"));
 
 	//loop until user makes a selection
 	do
 	{
 		u16 input = knob10();
-		choice = input * numChoices / NUM_ADC10_VALUES;
-
-		upperLine();
-		print_u16(input);
+		choice = input * NUM_Options / NUM_ADC10_VALUES;
 
 		//redraw menu only when choice changes
 		if (choice != previousChoice)
 		{
+			previousChoice = choice;
 			lowerLine();
 			switch (choice)
 			{
-				case 0:
+				case Option_RunCompetition:
 					printString_P(PSTR("1 RunCompetition"));
 					break;
-				case 1:
+				case Option_TestMode:
 					printString_P(PSTR("2 Test Mode     "));
 					break;
-				case 2:
+				case Option_PolyBotRemote:
 					printString_P(PSTR("3 PolyBot Remote"));
 					break;
 				default:
+					printString_P(PSTR("invalid choice"));
 					SOFTWARE_FAULT(PSTR("invalid choice"), choice, input);
 					break;
 			}
@@ -107,13 +120,13 @@ void mainMenu()
 	//run the chosen mode
 	switch (choice)
 	{
-		case 0:
+		case Option_RunCompetition:
 			runCompetition();
 			break;
-		case 1:
+		case Option_TestMode:
 			testMode();
 			break;
-		case 2:
+		case Option_PolyBotRemote:
 			polyBotRemote();
 			break;
 		default:
@@ -122,6 +135,7 @@ void mainMenu()
 	}
 }
 
+//! Runs the competition code.
 void runCompetition()
 {
 	printString_P(PSTR("RunCompetition"));
@@ -175,11 +189,22 @@ void runCompetition()
 	}
 }
 
+//! Test Mode pages.
+enum {
+	TEST_BatteryVoltages,
+	TEST_BatteryReadings,
+	TEST_Switches,
+	TEST_EncoderTicks,
+	TEST_EncoderReadings,
+	TEST_DriveMotors,
+	NUM_Tests
+};
+
+//! Runs the Test Mode functionality.
 void testMode()
 {
 	printString_P(PSTR("Test Mode"));
 
-	const u08 numPages = 4;
 	bool exit = FALSE;
 	u08 page = 0;
 
@@ -190,24 +215,27 @@ void testMode()
 		//print the static top line
 		switch (page)
 		{
-			case 0:
-				//battery voltages
+			case TEST_BatteryVoltages:
+			case TEST_BatteryReadings:
 				printString_P(PSTR(" Logic   Motor"));
 				break;
-			case 1:
-				//switch states
+			case TEST_Switches:
 				printString_P(PSTR("SW:BL BR SB SF F"));
 				break;
-			case 2:
-				//encoder ticks
+			case TEST_EncoderTicks:
 				printString_P(PSTR("L EncoderTicks R"));
 				break;
-			case 3:
+			case TEST_EncoderReadings:
 				//encoder readings
 				printString_P(PSTR("L EncoderInput R"));
 				break;
+			case TEST_DriveMotors:
+				//Drive motor test
+				printString_P(PSTR("Drive Motor Test"));
+				break;
 			default:
-				SOFTWARE_FAULT(PSTR("invalid test page"), page, 0);
+				printString_P(PSTR("invalid testpage"));
+				SOFTWARE_FAULT(PSTR("invalid testpage"), page, 0);
 				break;
 		}
 
@@ -216,15 +244,19 @@ void testMode()
 		{
 			switch (page)
 			{
-				case 0:
-					//battery voltages
+				case TEST_BatteryVoltages:
 					lowerLine();
 					printVoltage(readLogicBattery());
 					printChar(' ');
 					printVoltage(readMotorBattery());
 					break;
-				case 1:
-					//switch states
+				case TEST_BatteryReadings:
+					lowerLine();
+					print_u16(analog10(ANALOG_LOGIC_BATTERY));
+					lcdCursor(1, 8);
+					print_u16(analog10(ANALOG_MOTOR_BATTERY));
+					break;
+				case TEST_Switches:
 					lcdCursor(1, 3);
 					printChar(digitalInput(SWITCH_BACK_WALL_LEFT) + '0');
 					lcdCursor(1, 6);
@@ -236,22 +268,43 @@ void testMode()
 					lcdCursor(1, 15);
 					printChar(digitalInput(SWITCH_FRONT_WALL) + '0');
 					break;
-				case 2:
-					//encoder ticks
+				case TEST_EncoderTicks:
 					lowerLine();
 					print_u16(leftEncoderTicks);
 					printChar(' ');
 					print_u16(rightEncoderTicks);
 					break;
-				case 3:
-					//encoder readings
+				case TEST_EncoderReadings:
 					lowerLine();
 					print_u16(leftEncoderReading);
 					printChar(' ');
 					print_u16(rightEncoderReading);
 					break;
+				case TEST_DriveMotors:
+					//drive motor tests
+					lowerLine();
+					printString_P(PSTR("Inner Motor"));
+					motor(MOTOR_INNER, 30);
+					delayMs(750);
+					motor(MOTOR_INNER, -30);
+					delayMs(750);
+					motor(MOTOR_INNER, 0);
+
+					lowerLine();
+					printString_P(PSTR("Wall Motor "));
+					motor(MOTOR_WALL, 30);
+					delayMs(750);
+					motor(MOTOR_WALL, -30);
+					delayMs(750);
+					motor(MOTOR_WALL, 0);
+
+					lowerLine();
+					printCharN(' ', 11);
+					delayMs(3000);
+					break;
 				default:
-					SOFTWARE_FAULT(PSTR("invalid test page"), page, 0);
+					printString_P(PSTR("invalid testpage"));
+					SOFTWARE_FAULT(PSTR("invalid testpage"), page, 0);
 					break;
 			}
 
@@ -266,7 +319,7 @@ void testMode()
 				else
 				{
 					page++;
-					if (page >= numPages)
+					if (page >= NUM_Tests)
 					{
 						page = 0;
 					}
@@ -380,7 +433,7 @@ u16 readLogicBattery()
 {
 	u16 readingCounts = analog10(ANALOG_LOGIC_BATTERY);
 	//multiply by 1000 to convert volts to milliVolts, divide by ADC resolution to get a voltage.
-	u32 readingMillivolts = readingCounts * AREF_VOLTAGE * 1000 / NUM_ADC10_VALUES;
+	u32 readingMillivolts = (u32)readingCounts * AREF_VOLTAGE * 1000 / NUM_ADC10_VALUES;
 	u16 batteryMillivolts = (u16)(readingMillivolts * (RESISTOR_LOGIC_LOWER + RESISTOR_LOGIC_UPPER) / RESISTOR_LOGIC_LOWER);
 	return batteryMillivolts;
 }
@@ -390,7 +443,7 @@ u16 readMotorBattery()
 {
 	u16 readingCounts = analog10(ANALOG_MOTOR_BATTERY);
 	//multiply by 1000 to convert volts to milliVolts, divide by ADC resolution to get a voltage.
-	u32 readingMillivolts = readingCounts * AREF_VOLTAGE * 1000 / NUM_ADC10_VALUES;
+	u32 readingMillivolts = (u32)readingCounts * AREF_VOLTAGE * 1000 / NUM_ADC10_VALUES;
 	u16 batteryMillivolts = (u16)(readingMillivolts * (RESISTOR_MOTOR_LOWER + RESISTOR_MOTOR_UPPER) / RESISTOR_MOTOR_LOWER);
 	return batteryMillivolts;
 }
@@ -398,37 +451,37 @@ u16 readMotorBattery()
 //! Interrupt service routine for counting wheel encoder ticks.
 ISR(TIMER0_COMPA_vect)
 {
-    //read the wheel encoders (QRB-1114 reflective sensors)
+	//read the wheel encoders (QRB-1114 reflective sensors)
 	leftEncoderReading = analog10(ANALOG_WHEEL_ENCODER_LEFT);
-    rightEncoderReading = analog10(ANALOG_WHEEL_ENCODER_RIGHT);
+	rightEncoderReading = analog10(ANALOG_WHEEL_ENCODER_RIGHT);
 
-    if (leftEncoderReading >= ENCODER_THRESHOLD_LEFT_HIGH && leftEncoderState != 1)
-    {
-    	leftEncoderState = 1;
-    	leftEncoderTicks++;
-    }
-    else if (leftEncoderReading <= ENCODER_THRESHOLD_LEFT_LOW && leftEncoderState != 0)
-    {
-    	leftEncoderState = 0;
-    	leftEncoderTicks++;
-    }
+	if (leftEncoderReading >= ENCODER_THRESHOLD_LEFT_HIGH && leftEncoderState != 1)
+	{
+		leftEncoderState = 1;
+		leftEncoderTicks++;
+	}
+	else if (leftEncoderReading <= ENCODER_THRESHOLD_LEFT_LOW && leftEncoderState != 0)
+	{
+		leftEncoderState = 0;
+		leftEncoderTicks++;
+	}
 
-    if (rightEncoderReading >= ENCODER_THRESHOLD_RIGHT_HIGH && rightEncoderState != 1)
-    {
-    	rightEncoderState = 1;
-        rightEncoderTicks++;
-    }
-    else if (rightEncoderReading <= ENCODER_THRESHOLD_RIGHT_LOW && rightEncoderState != 0)
-    {
-    	rightEncoderState = 0;
-        rightEncoderTicks++;
-    }
+	if (rightEncoderReading >= ENCODER_THRESHOLD_RIGHT_HIGH && rightEncoderState != 1)
+	{
+		rightEncoderState = 1;
+		rightEncoderTicks++;
+	}
+	else if (rightEncoderReading <= ENCODER_THRESHOLD_RIGHT_LOW && rightEncoderState != 0)
+	{
+		rightEncoderState = 0;
+		rightEncoderTicks++;
+	}
 }
 
 //! Prints the left and right wheel encoder ticks.
 void printEncoderTicks()
 {
-	lcdCursor(1,0);
+	lowerLine();
 	print_u08(leftEncoderTicks);
 	lcdCursor(1,8);
 	print_u08(rightEncoderTicks);

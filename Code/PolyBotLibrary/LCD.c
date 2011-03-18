@@ -108,7 +108,8 @@ void lcdInit()
 }
 
 /*! Prints a single character specified by its ASCII code to the display.
-    Most LCDs can also print some special characters, such as those in LCDSpecialChars.h.
+    Most LCDs can also print some special characters, such as those in LCD.h.
+    @param data The character to print to the LCD.
  */
 void printChar(const u08 data)
 {
@@ -118,7 +119,20 @@ void printChar(const u08 data)
 	delayUs(50);
 }
 
-/*! Prints a null-terminated string starting at the current cursor position.
+/*! Repeatedly prints a character specified by its ASCII code to the display.
+    Most LCDs can also print some special characters, such as those in LCD.h.
+    @param data The character to print to the LCD.
+    @param times The number of times to print the character.
+ */
+void printCharN(const u08 data, const u08 times)
+{
+	for (u08 i = 0; i < times; i++)
+	{
+		printChar(data);
+	}
+}
+
+/*! Prints a null-terminated string from SRAM starting at the current cursor position.
     Strings exceeding the length of the display go into the display's buffer.
     This is useful if you are using the scrolling option, but wastes write time otherwise.
     Once the buffer for the first line has been filled, the cursor wraps to the next line.
