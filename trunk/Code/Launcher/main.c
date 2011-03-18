@@ -18,6 +18,8 @@ static volatile u08 rightEncoderState;
 static volatile u16 leftEncoderReading;
 static volatile u16 rightEncoderReading;
 
+volatile unsigned long icount;
+
 //local prototypes
 void mainMenu();
 void runCompetition();
@@ -146,27 +148,32 @@ void runCompetition()
 	//drive until at least one of the side wall switches hits
 	u08 rearSideWallHit = 0;
 	u08 frontSideWallHit = 0;
-	while (!rearSideWallHit && !frontSideWallHit)
+	/*while (rearSideWallHit && frontSideWallHit)
 	{
 		driveForward();
 		printEncoderTicks();
 		rearSideWallHit = digitalInput(SWITCH_SIDE_WALL_REAR);
 		frontSideWallHit = digitalInput(SWITCH_SIDE_WALL_FRONT);
-	}
+	}*/
 
+	u16 i = 0;
 	//ensure that both side wall switches are depressed
-	for (u16 i = 0; i < 1000; i++)
+	printString_P(PSTR("MOO"));
+	while(1)
 	{
+		driveForward();
+
 		if (rearSideWallHit && frontSideWallHit)
 		{
 			break;
 		}
 		delayMs(1);
-		rearSideWallHit = digitalInput(SWITCH_SIDE_WALL_REAR);
-		frontSideWallHit = digitalInput(SWITCH_SIDE_WALL_FRONT);
+		rearSideWallHit = !digitalInput(SWITCH_SIDE_WALL_REAR);
+		frontSideWallHit = !digitalInput(SWITCH_SIDE_WALL_FRONT);
 	}
 
-	if (!rearSideWallHit || !frontSideWallHit)
+	clearScreen();
+	if (i >= 1000)
 	{
 		haltRobot();
 		lowerLine();
@@ -177,7 +184,12 @@ void runCompetition()
 
 	clearScreen();
 	printString_P(PSTR("Turn Left"));
+	leftEncoderTicks = 0;
+	rightEncoderTicks = 0;
+
 	turnLeft();
+	while(leftEncoderTicks < 20 && rightEncoderTicks < 20);
+
 	launcherSpeed(180);
 
 	while (1)
@@ -289,7 +301,7 @@ void testMode()
 					motor(MOTOR_INNER, -30);
 					delayMs(750);
 					motor(MOTOR_INNER, 0);
-
+					delayMs(1000);
 					lowerLine();
 					printString_P(PSTR("Wall Motor "));
 					motor(MOTOR_WALL, 30);
@@ -297,9 +309,6 @@ void testMode()
 					motor(MOTOR_WALL, -30);
 					delayMs(750);
 					motor(MOTOR_WALL, 0);
-
-					lowerLine();
-					printCharN(' ', 11);
 					delayMs(3000);
 					break;
 				default:
@@ -387,7 +396,10 @@ void strafeRight()
 
 void driveForward()
 {
-	if (!digitalInput(SWITCH_BACK_WALL_LEFT))
+
+	motor(0, 55);
+	motor(1, 60);
+	/*if (!digitalInput(SWITCH_BACK_WALL_LEFT))
 	{
 		//motor(MOTOR_INNER, BASE_SPEED - 5);
 		//motor(MOTOR_WALL, BASE_SPEED + 5);
@@ -403,7 +415,7 @@ void driveForward()
 	else
 	{
 		motor(0, 55);
-	}
+	}*/
 }
 
 void driveBackward()
@@ -451,6 +463,7 @@ u16 readMotorBattery()
 //! Interrupt service routine for counting wheel encoder ticks.
 ISR(TIMER0_COMPA_vect)
 {
+	icount++;
 	//read the wheel encoders (QRB-1114 reflective sensors)
 	leftEncoderReading = analog10(ANALOG_WHEEL_ENCODER_LEFT);
 	rightEncoderReading = analog10(ANALOG_WHEEL_ENCODER_RIGHT);
