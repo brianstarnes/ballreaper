@@ -128,10 +128,10 @@ void buttonWait()
 }
 
 /*! Waits for a complete SW1 button press and release, with button debouncing, and
- *  indicates whether the button was held down for more than 300 ms or quickly tapped.
+ *  indicates whether the button was held down for more than 400 ms or quickly tapped.
     @see Use buttonWait() if you don't care how long the button was pressed for.
     @see Use getButton1() for simply checking the button state without waiting or debouncing.
-    @return TRUE if button was held at least 300ms, otherwise FALSE.
+    @return TRUE if button was held at least 400ms, otherwise FALSE.
  */
 bool buttonHeld()
 {
@@ -139,8 +139,8 @@ bool buttonHeld()
 	while (!getButton1());
 	//delay 30 ms for button debouncing
 	delayMs(30);
-	//count down 270ms waiting for button to be released, if it is still down
-    u08 cycles = 135;
+	//count down 370ms waiting for button to be released, if it is still down
+    u08 cycles = 185;
     while (getButton1() && cycles > 0)
     {
     	delayMs(2);

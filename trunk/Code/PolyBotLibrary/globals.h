@@ -34,7 +34,7 @@ typedef int8_t   s08; //!< Signed 8-bit integer, range: -128 to +127
 typedef uint16_t u16; //!< Unsigned 16-bit integer, range: 0 to +65,535
 typedef int16_t  s16; //!< Signed 16-bit integer, range: -32,768 to +32,767
 typedef uint32_t u32; //!< Unsigned 32-bit integer, range: 0 to +4,294,967,295
-typedef int16_t  s32; //!< Signed 32-bit integer, range: -2,147,483,648 to +2,147,483,647
+typedef int32_t  s32; //!< Signed 32-bit integer, range: -2,147,483,648 to +2,147,483,647
 
 //Bit manipulation macros
 #define sbi(a, b) ((a) |= 1 << (b))       //!< Sets bit b in variable a.
