@@ -11,12 +11,14 @@
 #include "utility.h"
 #include <avr/pgmspace.h>
 
-static volatile u16 leftEncoderTicks = 0;
-static volatile u16 rightEncoderTicks = 0;
-static volatile u08 leftEncoderState;
-static volatile u08 rightEncoderState;
-static volatile u16 leftEncoderReading;
-static volatile u16 rightEncoderReading;
+static volatile s16 innerEncoderTicks = 0;
+static volatile s16 wallEncoderTicks = 0;
+static volatile u08 innerEncoderState;
+static volatile u08 wallEncoderState;
+static volatile u16 innerEncoderReading;
+static volatile u16 wallEncoderReading;
+static volatile s16 error;
+static volatile s16 totalError;
 
 //local prototypes
 void mainMenu();
@@ -30,6 +32,7 @@ u16 readMotorBattery();
 
 void launcherSpeed(u08 speed);
 void strafeRight();
+void pidDrive();
 void driveForward();
 void driveBackward();
 void turnLeft();
@@ -51,7 +54,7 @@ int main()
 	sendBootNotification();
 
 	//enable timer0 (set prescaler to /256)
-	TCCR0B |= _BV(CS02);
+	TCCR0B |= _BV(CS01) | _BV(CS00);
 	//enable interrupt for timer0 output compare unit A
 	TIMSK0 |= _BV(OCIE0A);
 
@@ -162,13 +165,13 @@ void runCompetition()
 	clearScreen();
 	printString_P(PSTR("Turn Left"));
 
-	leftEncoderTicks = 0;
-    rightEncoderTicks = 0;
+	innerEncoderTicks = 0;
+    wallEncoderTicks = 0;
 
     turnLeft();
 
 	// Turn left 90 degrees
-	while(leftEncoderTicks < 25 && rightEncoderTicks < 25);
+	while(innerEncoderTicks < 25 && wallEncoderTicks < 25);
 	stop();
 
 	launcherSpeed(180);
@@ -213,9 +216,41 @@ void launcherSpeed(u08 speed)
 	servo(SERVO_RIGHT_LAUNCHER, speed);
 }
 
+void pidDrive()
+{
+	s08 wallMotorSpeed;
+	s08 innerMotorSpeed;
+	float Kp = .15;
+	float driveSpeedWall = 25;
+	float driveSpeedInner = 20;
+
+	// If wall motor is counting ticks faster error will be negative
+	// limit error from making motor speed go negative and turning backwards
+	//error = (error >  driveSpeed) ?  driveSpeed : error;
+	//error = (error < -driveSpeed) ? -driveSpeed : error;
+
+	wallMotorSpeed  = (s08)(driveSpeedWall  + (Kp * error));
+	innerMotorSpeed = (s08)(driveSpeedInner - (Kp * error));
+
+	if (wallMotorSpeed < 0)
+		wallMotorSpeed = 0;
+	if (innerMotorSpeed < 0)
+		innerMotorSpeed = 0;
+
+	motor(MOTOR_WALL, wallMotorSpeed);
+	motor(MOTOR_INNER, innerMotorSpeed);
+
+	upperLine();
+	print_s16(error);
+	lowerLine();
+	print_s16(wallEncoderTicks);
+	printChar(' ');
+	print_s16(innerEncoderTicks);
+}
+
 void driveForward()
 {
-	motor(MOTOR_WALL, 30);
+	motor(MOTOR_WALL,  30);
 	motor(MOTOR_INNER, 30);
 }
 
@@ -272,6 +307,9 @@ void testMode()
 	bool exit = FALSE;
 	u08 page = 0;
 
+	innerEncoderTicks = 0;
+	wallEncoderTicks  = 0;
+
 	//stay in test mode pages until user exits
 	while (exit == FALSE)
 	{
@@ -287,15 +325,15 @@ void testMode()
 				printString_P(PSTR("SW:BL BR SB SF F"));
 				break;
 			case TEST_EncoderTicks:
-				printString_P(PSTR("L EncoderTicks R"));
+				printString_P(PSTR("W EncoderTicks I"));
 				break;
 			case TEST_EncoderReadings:
 				//encoder readings
-				printString_P(PSTR("L EncoderInput R"));
+				printString_P(PSTR("W EncoderInput I"));
 				break;
 			case TEST_DriveMotors:
 				//Drive motor test
-				printString_P(PSTR("Drive Motor Test"));
+				//printString_P(PSTR("Drive Motor Test"));
 				break;
 			default:
 				printString_P(PSTR("invalid testpage"));
@@ -334,18 +372,20 @@ void testMode()
 					break;
 				case TEST_EncoderTicks:
 					lowerLine();
-					print_u16(leftEncoderTicks);
+					print_u16(wallEncoderTicks);
 					printChar(' ');
-					print_u16(rightEncoderTicks);
+					print_u16(innerEncoderTicks);
 					break;
 				case TEST_EncoderReadings:
 					lowerLine();
-					print_u16(leftEncoderReading);
+					print_u16(wallEncoderReading);
 					printChar(' ');
-					print_u16(rightEncoderReading);
+					print_u16(innerEncoderReading);
 					break;
 				case TEST_DriveMotors:
 					//drive motor tests
+					pidDrive();
+					/*
 					lowerLine();
 					printString_P(PSTR("Inner Motor"));
 					motor(MOTOR_INNER, 30);
@@ -361,7 +401,7 @@ void testMode()
 					motor(MOTOR_WALL, -30);
 					delayMs(750);
 					motor(MOTOR_WALL, 0);
-					delayMs(3000);
+					*/
 					break;
 				default:
 					printString_P(PSTR("invalid testpage"));
@@ -458,39 +498,42 @@ u16 readMotorBattery()
 ISR(TIMER0_COMPA_vect)
 {
 	//read the wheel encoders (QRB-1114 reflective sensors)
-	leftEncoderReading = analog10(ANALOG_WHEEL_ENCODER_LEFT);
-	rightEncoderReading = analog10(ANALOG_WHEEL_ENCODER_RIGHT);
+	innerEncoderReading = analog10(ANALOG_WHEEL_ENCODER_INNER);
+	wallEncoderReading = analog10(ANALOG_WHEEL_ENCODER_WALL);
 
-	if (leftEncoderReading >= ENCODER_THRESHOLD_LEFT_HIGH && leftEncoderState != 1)
+	if (innerEncoderReading >= ENCODER_THRESHOLD_LEFT_HIGH && innerEncoderState != 1)
 	{
-		leftEncoderState = 1;
-		leftEncoderTicks++;
+		innerEncoderState = 1;
+		innerEncoderTicks++;
 	}
-	else if (leftEncoderReading <= ENCODER_THRESHOLD_LEFT_LOW && leftEncoderState != 0)
+	else if (innerEncoderReading <= ENCODER_THRESHOLD_LEFT_LOW && innerEncoderState != 0)
 	{
-		leftEncoderState = 0;
-		leftEncoderTicks++;
+		innerEncoderState = 0;
+		innerEncoderTicks++;
 	}
 
-	if (rightEncoderReading >= ENCODER_THRESHOLD_RIGHT_HIGH && rightEncoderState != 1)
+	if (wallEncoderReading >= ENCODER_THRESHOLD_RIGHT_HIGH && wallEncoderState != 1)
 	{
-		rightEncoderState = 1;
-		rightEncoderTicks++;
+		wallEncoderState = 1;
+		wallEncoderTicks++;
 	}
-	else if (rightEncoderReading <= ENCODER_THRESHOLD_RIGHT_LOW && rightEncoderState != 0)
+	else if (wallEncoderReading <= ENCODER_THRESHOLD_RIGHT_LOW && wallEncoderState != 0)
 	{
-		rightEncoderState = 0;
-		rightEncoderTicks++;
+		wallEncoderState = 0;
+		wallEncoderTicks++;
 	}
+
+	error = (innerEncoderTicks - wallEncoderTicks);
+	totalError += error;
 }
 
 //! Prints the left and right wheel encoder ticks.
 void printEncoderTicks()
 {
 	lowerLine();
-	print_u08(leftEncoderTicks);
+	print_u08(innerEncoderTicks);
 	lcdCursor(1,8);
-	print_u08(rightEncoderTicks);
+	print_u08(wallEncoderTicks);
 }
 
 void haltRobot()
@@ -525,10 +568,10 @@ void downLink()
 
 	u08 downlinkData[5];
 	downlinkData[0] = switches;
-	downlinkData[1] = (u08)(leftEncoderTicks >> 8);
-	downlinkData[2] = (u08)leftEncoderTicks;
-	downlinkData[3] = (u08)(rightEncoderTicks >> 8);;
-	downlinkData[4] = (u08)rightEncoderTicks;
+	downlinkData[1] = (u08)(innerEncoderTicks >> 8);
+	downlinkData[2] = (u08)innerEncoderTicks;
+	downlinkData[3] = (u08)(wallEncoderTicks >> 8);;
+	downlinkData[4] = (u08)wallEncoderTicks;
 
 	sendPacket(TELEMETRY_DATA, downlinkData, sizeof(downlinkData));
 }

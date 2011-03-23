@@ -75,8 +75,8 @@ typedef enum
 {
 	ANALOG_MOTOR_BATTERY = 0, //!< The analog input that reads the motor battery, via a voltage divider.
 	ANALOG_LOGIC_BATTERY = 1, //!< The analog input that reads the logic/servo battery, via a voltage divider.
-	ANALOG_WHEEL_ENCODER_LEFT = 8, //!< The left wheel encoder (QRB-1114 reflective sensor).
-	ANALOG_WHEEL_ENCODER_RIGHT = 9, //!< The right wheel encoder (QRB-1114 reflective sensor).
+	ANALOG_WHEEL_ENCODER_INNER = 8, //!< The left wheel encoder (QRB-1114 reflective sensor).
+	ANALOG_WHEEL_ENCODER_WALL = 9, //!< The right wheel encoder (QRB-1114 reflective sensor).
 } analog_t;
 
 //! The number of black and white stripes on the encoder wheel
