@@ -224,16 +224,14 @@ void pidDrive()
 	float driveSpeedWall = 25;
 	float driveSpeedInner = 20;
 
-	// If wall motor is counting ticks faster error will be negative
-	// limit error from making motor speed go negative and turning backwards
-	//error = (error >  driveSpeed) ?  driveSpeed : error;
-	//error = (error < -driveSpeed) ? -driveSpeed : error;
-
+	// If wall motor is counting ticks faster error will be negative, error is calculated in the interrupt.
 	wallMotorSpeed  = (s08)(driveSpeedWall  + (Kp * error));
 	innerMotorSpeed = (s08)(driveSpeedInner - (Kp * error));
 
+	// limit error from making motor speed go negative and turning the wheel backwards
 	if (wallMotorSpeed < 0)
 		wallMotorSpeed = 0;
+
 	if (innerMotorSpeed < 0)
 		innerMotorSpeed = 0;
 
