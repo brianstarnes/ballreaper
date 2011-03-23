@@ -12,7 +12,9 @@
 #include <avr/pgmspace.h>
 
 static volatile s16 innerEncoderTicks = 0;
+static volatile s16 totalInnerEncoderTicks = 0;
 static volatile s16 wallEncoderTicks = 0;
+static volatile s16 totalWallEncoderTicks = 0;
 static volatile u08 innerEncoderState;
 static volatile u08 wallEncoderState;
 static volatile u16 innerEncoderReading;
@@ -32,9 +34,9 @@ u16 readMotorBattery();
 
 void launcherSpeed(u08 speed);
 void strafeRight();
-void pidDrive();
-void driveForward();
-void driveBackward();
+void pidDrive(s08 wallSpeed, s08 innerSpeed);
+void driveForward(s08 wallSpeed, s08 innerSpeed);
+void driveBackward(s08 wallSpeed, s08 innerSpeed);
 void turnLeft();
 void turnRight();
 void stop();
@@ -154,7 +156,7 @@ void runCompetition()
 	//drive until at least the side wall switches hit
 	while(!rearSideWallHit && !frontSideWallHit)
 	{
-		driveForward();
+		driveForward(25, 25);
 
 		delayMs(1);
 		rearSideWallHit =  REAR_SIDE_WALL_HIT;
@@ -172,30 +174,119 @@ void runCompetition()
 
 	// Turn left 90 degrees
 	while(innerEncoderTicks < 25 && wallEncoderTicks < 25);
-	stop();
 
+	innerEncoderTicks = 0;
+    wallEncoderTicks = 0;
+
+    driveForward(25, 25);
+	delayMs(100);
+
+	// make sure that the robot turned the full 90 degrees and itsn't stuck on the wall with the wheels not moving
+	while (BACK_RIGHT_HIT        ||
+		   BACK_LEFT_HIT         ||
+		   innerEncoderTicks < 5 ||
+		   wallEncoderTicks < 5)
+	{
+    	clearScreen();
+        printString_P(PSTR("Adjusting Left"));
+
+		turnLeft();
+		while(innerEncoderTicks < 7 && wallEncoderTicks < 7);
+		driveForward(25, 25);
+		delayMs(100);
+	}
+
+	stop();
 	launcherSpeed(180);
 
-	// Start Ball Reaping!
+	// Start Ball Reaping!  We only get 2 refills so make them count!
     while (refills < 2)
 	{
+    	static int i, j;
+
+    	i = j = 0;
 		stop();
+		delayMs(500);
     	scraperDown();
 
     	// Start driving forward to pick balls up
     	clearScreen();
         printString_P(PSTR("Drive forward"));
-		driveForward();
-		while(!FRONT_HIT);
+		while(!FRONT_HIT)
+		{
+			if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
+			{
+				if (!REAR_SIDE_WALL_HIT)
+				{
+					i++;
+					if (i > 5)
+						i = 5;
+					driveForward(30 + i, 30);
+				}
+				else if (i > 0)
+					i--;
+
+				if (!FRONT_SIDE_WALL_HIT)
+				{
+					j++;
+					if (j > 5)
+						j = 5;
+					driveForward(30, 30 + j);
+				}
+				else if (j > 0)
+					j--;
+			}
+			else
+			{
+				driveForward(30, 30);
+				i = j = 0;
+			}
+			delayMs(200);
+		}
 
 		stop();
+		delayMs(500);
 		scraperUp();
+
+		i = j = 0;
 
     	// Start driving backwards to get a refill
     	clearScreen();
         printString_P(PSTR("Drive backwards"));
-		driveBackward();
-		while(!BACK_RIGHT_HIT || !BACK_LEFT_HIT);
+		while(!BACK_RIGHT_HIT && !BACK_LEFT_HIT)
+		{
+			if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
+			{
+				if (!REAR_SIDE_WALL_HIT)
+				{
+					i++;
+					if (i > 5)
+						i = 5;
+					driveBackward(30, 30 + i);
+				}
+				else if (i > 0)
+					i--;
+				else
+				{
+					if (!FRONT_SIDE_WALL_HIT)
+					{
+						j++;
+						if (j > 5)
+							j = 5;
+						driveBackward(30 + j, 30);
+					}
+					else if (j > 0)
+						j--;
+				}
+			}
+			else
+			{
+				driveBackward(30, 30);
+				i = j = 0;
+			}
+			delayMs(300);
+		}
+
 		refills++;
 	}
 
@@ -216,13 +307,17 @@ void launcherSpeed(u08 speed)
 	servo(SERVO_RIGHT_LAUNCHER, speed);
 }
 
-void pidDrive()
+void pidDrive(s08 wallSpeed, s08 innerSpeed)
 {
 	s08 wallMotorSpeed;
 	s08 innerMotorSpeed;
 	float Kp = .15;
-	float driveSpeedWall = 25;
-	float driveSpeedInner = 20;
+	float driveSpeedWall;
+	float driveSpeedInner;
+
+	//compensate for wall motor being a bit slower than inner motor
+	driveSpeedWall = wallSpeed + 2;
+	driveSpeedInner = innerSpeed;
 
 	// If wall motor is counting ticks faster error will be negative, error is calculated in the interrupt.
 	wallMotorSpeed  = (s08)(driveSpeedWall  + (Kp * error));
@@ -238,35 +333,37 @@ void pidDrive()
 	motor(MOTOR_WALL, wallMotorSpeed);
 	motor(MOTOR_INNER, innerMotorSpeed);
 
+	/*
 	upperLine();
 	print_s16(error);
 	lowerLine();
-	print_s16(wallEncoderTicks);
+	print_s16(totalWallEncoderTicks);
 	printChar(' ');
-	print_s16(innerEncoderTicks);
+	print_s16(totalInnerEncoderTicks);
+	*/
 }
 
-void driveForward()
+void driveForward(s08 wallSpeed, s08 innerSpeed)
 {
-	motor(MOTOR_WALL,  30);
-	motor(MOTOR_INNER, 30);
+	motor(MOTOR_WALL,  wallSpeed + 1);
+	motor(MOTOR_INNER, innerSpeed);
 }
 
-void driveBackward()
+void driveBackward(s08 wallSpeed, s08 innerSpeed)
 {
-	motor(MOTOR_WALL, -30);
-	motor(MOTOR_INNER, -30);
+	motor(MOTOR_WALL, -wallSpeed);
+	motor(MOTOR_INNER, -innerSpeed -1);
 }
 
 void turnLeft()
 {
-	motor(MOTOR_WALL, 40);
-	motor(MOTOR_INNER, -40);
+	motor(MOTOR_WALL, 52);
+	motor(MOTOR_INNER, -50);
 }
 
 void turnRight()
 {
-	motor(MOTOR_WALL, -40);
+	motor(MOTOR_WALL, -42);
 	motor(MOTOR_INNER, 40);
 }
 
@@ -382,7 +479,7 @@ void testMode()
 					break;
 				case TEST_DriveMotors:
 					//drive motor tests
-					pidDrive();
+					pidDrive(25, 25);
 					/*
 					lowerLine();
 					printString_P(PSTR("Inner Motor"));
@@ -503,25 +600,29 @@ ISR(TIMER0_COMPA_vect)
 	{
 		innerEncoderState = 1;
 		innerEncoderTicks++;
+		totalInnerEncoderTicks++;
 	}
 	else if (innerEncoderReading <= ENCODER_THRESHOLD_LEFT_LOW && innerEncoderState != 0)
 	{
 		innerEncoderState = 0;
 		innerEncoderTicks++;
+		totalInnerEncoderTicks++;
 	}
 
 	if (wallEncoderReading >= ENCODER_THRESHOLD_RIGHT_HIGH && wallEncoderState != 1)
 	{
 		wallEncoderState = 1;
 		wallEncoderTicks++;
+		totalWallEncoderTicks++;
 	}
 	else if (wallEncoderReading <= ENCODER_THRESHOLD_RIGHT_LOW && wallEncoderState != 0)
 	{
 		wallEncoderState = 0;
 		wallEncoderTicks++;
+		totalWallEncoderTicks++;
 	}
 
-	error = (innerEncoderTicks - wallEncoderTicks);
+	error = (totalInnerEncoderTicks - totalWallEncoderTicks);
 	totalError += error;
 }
 
