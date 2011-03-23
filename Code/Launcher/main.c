@@ -11,10 +11,10 @@
 #include "utility.h"
 #include <avr/pgmspace.h>
 
-static volatile s16 innerEncoderTicks = 0;
-static volatile s16 totalInnerEncoderTicks = 0;
-static volatile s16 wallEncoderTicks = 0;
-static volatile s16 totalWallEncoderTicks = 0;
+static volatile u16 innerEncoderTicks = 0;
+static volatile u16 totalInnerEncoderTicks = 0;
+static volatile u16 wallEncoderTicks = 0;
+static volatile u16 totalWallEncoderTicks = 0;
 static volatile u08 innerEncoderState;
 static volatile u08 wallEncoderState;
 static volatile u16 innerEncoderReading;
@@ -55,8 +55,8 @@ int main()
 	initPacketDriver();
 	sendBootNotification();
 
-	//enable timer0 (set prescaler to /256)
-	TCCR0B |= _BV(CS01) | _BV(CS00);
+	//enable timer0 (set prescaler to /1024)
+	TCCR0B |= _BV(CS02) | _BV(CS00);
 	//enable interrupt for timer0 output compare unit A
 	TIMSK0 |= _BV(OCIE0A);
 
@@ -153,10 +153,10 @@ void runCompetition()
 	lowerLine();
 	printString_P(PSTR("Drive forward"));
 
-	//drive until at least the side wall switches hit
+	//drive until either side wall switches hit
 	while(!rearSideWallHit && !frontSideWallHit)
 	{
-		driveForward(25, 25);
+		pidDrive(FAST_SPEED_WALL_WHEEL, FAST_SPEED_INNER_WHEEL);
 
 		delayMs(1);
 		rearSideWallHit =  REAR_SIDE_WALL_HIT;
@@ -173,12 +173,12 @@ void runCompetition()
     turnLeft();
 
 	// Turn left 90 degrees
-	while(innerEncoderTicks < 25 && wallEncoderTicks < 25);
+	while(innerEncoderTicks < 20 || wallEncoderTicks < 20);
 
 	innerEncoderTicks = 0;
     wallEncoderTicks = 0;
 
-    driveForward(25, 25);
+    pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
 	delayMs(100);
 
 	// make sure that the robot turned the full 90 degrees and itsn't stuck on the wall with the wheels not moving
@@ -192,7 +192,7 @@ void runCompetition()
 
 		turnLeft();
 		while(innerEncoderTicks < 7 && wallEncoderTicks < 7);
-		driveForward(25, 25);
+		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
 		delayMs(100);
 	}
 
@@ -221,7 +221,7 @@ void runCompetition()
 					i++;
 					if (i > 5)
 						i = 5;
-					driveForward(30 + i, 30);
+					pidDrive(SLOW_SPEED_WALL_WHEEL + i, SLOW_SPEED_INNER_WHEEL);
 				}
 				else if (i > 0)
 					i--;
@@ -231,14 +231,14 @@ void runCompetition()
 					j++;
 					if (j > 5)
 						j = 5;
-					driveForward(30, 30 + j);
+					pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
 				}
 				else if (j > 0)
 					j--;
 			}
 			else
 			{
-				driveForward(30, 30);
+				pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
 				i = j = 0;
 			}
 			delayMs(200);
@@ -262,7 +262,7 @@ void runCompetition()
 					i++;
 					if (i > 5)
 						i = 5;
-					driveBackward(30, 30 + i);
+					driveBackward(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + i);
 				}
 				else if (i > 0)
 					i--;
@@ -273,7 +273,7 @@ void runCompetition()
 						j++;
 						if (j > 5)
 							j = 5;
-						driveBackward(30 + j, 30);
+						driveBackward(SLOW_SPEED_WALL_WHEEL + j, SLOW_SPEED_INNER_WHEEL);
 					}
 					else if (j > 0)
 						j--;
@@ -281,7 +281,7 @@ void runCompetition()
 			}
 			else
 			{
-				driveBackward(30, 30);
+				driveBackward(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
 				i = j = 0;
 			}
 			delayMs(300);
@@ -311,17 +311,11 @@ void pidDrive(s08 wallSpeed, s08 innerSpeed)
 {
 	s08 wallMotorSpeed;
 	s08 innerMotorSpeed;
-	float Kp = .15;
-	float driveSpeedWall;
-	float driveSpeedInner;
-
-	//compensate for wall motor being a bit slower than inner motor
-	driveSpeedWall = wallSpeed + 2;
-	driveSpeedInner = innerSpeed;
+	float Kp = 0.5;
 
 	// If wall motor is counting ticks faster error will be negative, error is calculated in the interrupt.
-	wallMotorSpeed  = (s08)(driveSpeedWall  + (Kp * error));
-	innerMotorSpeed = (s08)(driveSpeedInner - (Kp * error));
+	wallMotorSpeed  = (s08)(wallSpeed  + (Kp * error));
+	innerMotorSpeed = (s08)(innerSpeed - (Kp * error));
 
 	// limit error from making motor speed go negative and turning the wheel backwards
 	if (wallMotorSpeed < 0)
@@ -345,25 +339,25 @@ void pidDrive(s08 wallSpeed, s08 innerSpeed)
 
 void driveForward(s08 wallSpeed, s08 innerSpeed)
 {
-	motor(MOTOR_WALL,  wallSpeed + 1);
+	motor(MOTOR_WALL,  wallSpeed);
 	motor(MOTOR_INNER, innerSpeed);
 }
 
 void driveBackward(s08 wallSpeed, s08 innerSpeed)
 {
 	motor(MOTOR_WALL, -wallSpeed);
-	motor(MOTOR_INNER, -innerSpeed -1);
+	motor(MOTOR_INNER, -innerSpeed);
 }
 
 void turnLeft()
 {
-	motor(MOTOR_WALL, 52);
-	motor(MOTOR_INNER, -50);
+	motor(MOTOR_WALL, TURN_SPEED_WALL_WHEEL);
+	motor(MOTOR_INNER, -TURN_SPEED_INNER_WHEEL);
 }
 
 void turnRight()
 {
-	motor(MOTOR_WALL, -42);
+	motor(MOTOR_WALL, -40);
 	motor(MOTOR_INNER, 40);
 }
 
@@ -596,26 +590,26 @@ ISR(TIMER0_COMPA_vect)
 	innerEncoderReading = analog10(ANALOG_WHEEL_ENCODER_INNER);
 	wallEncoderReading = analog10(ANALOG_WHEEL_ENCODER_WALL);
 
-	if (innerEncoderReading >= ENCODER_THRESHOLD_LEFT_HIGH && innerEncoderState != 1)
+	if (innerEncoderReading >= ENCODER_THRESHOLD_INNER_HIGH && innerEncoderState != 1)
 	{
 		innerEncoderState = 1;
 		innerEncoderTicks++;
 		totalInnerEncoderTicks++;
 	}
-	else if (innerEncoderReading <= ENCODER_THRESHOLD_LEFT_LOW && innerEncoderState != 0)
+	else if (innerEncoderReading <= ENCODER_THRESHOLD_INNER_LOW && innerEncoderState != 0)
 	{
 		innerEncoderState = 0;
 		innerEncoderTicks++;
 		totalInnerEncoderTicks++;
 	}
 
-	if (wallEncoderReading >= ENCODER_THRESHOLD_RIGHT_HIGH && wallEncoderState != 1)
+	if (wallEncoderReading >= ENCODER_THRESHOLD_WALL_HIGH && wallEncoderState != 1)
 	{
 		wallEncoderState = 1;
 		wallEncoderTicks++;
 		totalWallEncoderTicks++;
 	}
-	else if (wallEncoderReading <= ENCODER_THRESHOLD_RIGHT_LOW && wallEncoderState != 0)
+	else if (wallEncoderReading <= ENCODER_THRESHOLD_WALL_LOW && wallEncoderState != 0)
 	{
 		wallEncoderState = 0;
 		wallEncoderTicks++;
