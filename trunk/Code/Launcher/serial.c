@@ -1,4 +1,4 @@
-#include "globals.h"
+#include "serial.h"
 #include <inttypes.h>
 #include <string.h>
 
@@ -35,7 +35,7 @@ void uart0Init()
 	// Converts the user-friendly baud rate defined above to prescaler bits to set in UBRR
 	#include <util/setbaud.h>
 	// Copy the values defined by setbaud.h to the appropriate UART config registers
-	#if defined (__AVR_ATmega32__)
+	#if defined (UBRRH)
 		UBRRH = UBRRH_VALUE;
 		UBRRL = UBRRL_VALUE;
 		#if USE_2X
@@ -43,7 +43,7 @@ void uart0Init()
 		#else
 		UCSRA &= ~(1<<U2X);
 		#endif
-	#elif defined (__AVR_ATmega644__) || defined(__AVR_ATmega644P__)
+	#elif defined (UBRR0H)
 		UBRR0H = UBRRH_VALUE;
 		UBRR0L = UBRRL_VALUE;
 		#if USE_2X
@@ -51,14 +51,18 @@ void uart0Init()
 		#else
 		UCSR0A &= ~(1<<U2X0);
 		#endif
+	#else
+		#error Failed to detect which serial registers your chip uses.
 	#endif
 
 	// Set USART Control and Status Register B to configure enabled functionality
 	// Enable receiver and transmitter, and Receive Complete Interrupt
-	#if defined (__AVR_ATmega32__)
+	#if defined (UCSRB)
 		UCSRB = (1<<RXEN)|(1<<TXEN)|(1<<RXCIE);
-	#elif defined (__AVR_ATmega644__) || defined(__AVR_ATmega644P__)
+	#elif defined (UCSR0B)
 		UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
+	#else
+		#error Failed to detect which serial registers your chip uses.
 	#endif
 	// Enable Receiver=(1<<RXEN)
 	// Enable Transmitter=(1<<TXEN)
@@ -68,10 +72,12 @@ void uart0Init()
 
 	// Set USART Control and Status Register C to configure frame format, etc
 	// asynchronous, 8 data bits, no parity, 1 stop bit, UCPOL must be 0 in async mode
-	#if defined (__AVR_ATmega32__)
+	#if defined (UCSRC)
 		UCSRC = (1<<URSEL)|(0<<UMSEL)|(3<<UCSZ0)|(0<<UPM0)|(0<<USBS)|(0<<UCPOL);
-	#elif defined (__AVR_ATmega644__) || defined(__AVR_ATmega644P__)
+	#elif defined (UCSR0C)
 		UCSR0C = (0<<UMSEL00)|(3<<UCSZ00)|(0<<UPM00)|(0<<USBS0)|(0<<UCPOL0);
+	#else
+		#error Failed to detect which serial registers your chip uses.
 	#endif
 	//(1<<URSEL) is a register selecter only needed for atmega32. URSEL must be one when writing to UCSRC.
 	// asynchronous=(0<<UMSEL00), synchronous=(1<<UMSEL00)
@@ -86,8 +92,8 @@ void uart0Init()
 	sei();
 }
 
-//Only the Atmega644P has a second UART
-#if defined(__AVR_ATmega644P__)
+//Not all AVR chips have a second UART
+#if defined (UBRR1H)
 void uart1Init()
 {
 	// Disable interrupts globally, per ATmega documentation recommendation
@@ -135,37 +141,41 @@ void uart1Init()
 }
 #endif
 
-// Simple UART transmit function from atmega datasheet
+// Simple UART transmit function from ATmega datasheet
 // More sophisticated way is to use the TX Complete interrupt - USART_TXC_vect/USART0_TX_vect
 void uart0Transmit(u08 data)
 {
-	#if defined (__AVR_ATmega32__)
+	#if defined (UCSRA)
 		// Wait for empty transmit buffer
 		while(!(UCSRA & (1<<UDRE)));
 		// put data into buffer, which sends the data
 		UDR = data;
-	#elif defined (__AVR_ATmega644__) || defined(__AVR_ATmega644P__)
+	#elif defined (UCSR0A)
 		// Wait for empty transmit buffer
 		while(!(UCSR0A & (1<<UDRE0)));
 		// put data into buffer, which sends the data
 		UDR0 = data;
+	#else
+		#error Failed to detect which serial registers your chip uses.
 	#endif
 }
 
-// simple UART receive function from atmega datasheet
+// simple UART receive function from ATmega datasheet
 // More sophisticated way is to use the RX Complete interrupt - USART_RXC_vect/USART0_RX_vect
 u08 uart0Receive()
 {
-	#if defined (__AVR_ATmega32__)
+	#if defined (UCSRA)
 		// Wait for data to be received
 		while(!(UCSRA & (1<<RXC)));
 		// Get and return received data from buffer
 		return UDR;
-	#elif defined (__AVR_ATmega644__) || defined(__AVR_ATmega644P__)
+	#elif defined (UCSR0A)
 		// Wait for data to be received
 		while(!(UCSR0A & (1<<RXC0)));
 		// Get and return received data from buffer
 		return UDR0;
+	#else
+		#error Failed to detect which serial registers your chip uses.
 	#endif
 }
 
@@ -174,11 +184,13 @@ void usart0Flush()
 {
 	u08 dummy;
 	//gobbles up all the received characters in the buffer until RXC (Receive complete) goes to 0
-	#if defined (__AVR_ATmega32__)
+	#if defined (UCSRA)
 		while (UCSRA & (1<<RXC))
 			dummy = UDR;
-	#elif defined (__AVR_ATmega644__) || defined(__AVR_ATmega644P__)
+	#elif defined (UCSR0A)
 		while (UCSR0A & (1<<RXC0))
 			dummy = UDR0;
+	#else
+		#error Failed to detect which serial registers your chip uses.
 	#endif
 }

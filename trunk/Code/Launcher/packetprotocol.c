@@ -1,5 +1,6 @@
-#include "globals.h"
+#include "debug.h"
 #include "LCD.h"
+#include "main.h"
 #include "packetprotocol.h"
 #include "utility.h"
 #include <avr/io.h>
@@ -19,12 +20,6 @@
 //!Plain buffer, just large enough to store the maximum data section (not counting the optional dataLength).
 #define DATA_SECTION_LENGTH 20
 
-
-#define LAUNCHER_FIRMWARE_VERSION "1.0"
-
-//! The version string returned by the ::GET_VERSIONS command. Stored in program space.
-#define VERSION_STRING PSTR(LAUNCHER_FIRMWARE_VERSION "|" __TIMESTAMP__ "|" __AVR_LIBC_VERSION_STRING__ "|" __AVR_LIBC_DATE_STRING__)
-
 /*! Indexes that track the beginning and end of the circular ::receiveBuffer.
     When they are equal, there is nothing in the buffer.
     Length of data stored in the buffer is tail - head.
@@ -40,23 +35,33 @@ static volatile u08 transmitIndex;
 //! Length in bytes of the current packet in ::transmitBuffer.
 static u08 transmitLength;
 //! Sequence Number to include in the next outgoing packet.
-static u08 sequenceNum = 0;
+static u08 downSequenceNum = 0;
+
+static ValidateDataLengthCallback_t validator = NULL;
+static ExecCallback_t executor = NULL;
+static u08 maxPacketType = 0;
 
 //Stats
 
-//Counter that tracks whether buffer overfill condition ever occurs, for development/testing purposes.
-static volatile u16 bufferOverfilledCounter = 0;
+//! Counter that tracks how many times a buffer overfill condition occurs, for development/testing purposes.
+volatile u16 bufferOverfilledCounter = 0;
 
 static volatile u08 codeTracks[16];
 
 //Local Prototypes
-static void sendVersionData();
-static void sendStats();
 static void processPacketBuffer();
-static void executePacket(const u08 packetType, const u08 * const data, const u08 dataLength);
 //static void resetPolyBot(const u08 * const data);
 static void codeTrack(const u08 num);
 //static void printCodeTracks();
+
+
+
+void configPacketProcessor(ValidateDataLengthCallback_t newValidator, ExecCallback_t newExecutor, u08 newMaxPacketType)
+{
+	validator = newValidator;
+	executor = newExecutor;
+	maxPacketType = newMaxPacketType;
+}
 
 void initPacketDriver()
 {
@@ -92,28 +97,7 @@ static void printCodeTracks()
 	}
 }*/
 
-void sendBootNotification()
-{
-	sendPacket(BOOTED_UP, NULL, 0);
-}
-
-static void sendVersionData()
-{
-	char *versionString = VERSION_STRING;
-	sendPacket(VERSION_DATA, (u08 *)versionString, strlen(versionString));
-}
-
-static void sendStats()
-{
-	//assemble the data section of the STATS_DATA packet
-	u08 statsData[2];
-	statsData[0] = (u08)(bufferOverfilledCounter >> 8);
-	statsData[1] = (u08)bufferOverfilledCounter;
-
-	sendPacket(STATS_DATA, statsData, sizeof(statsData));
-}
-
-void sendPacket(const DownlinkPacketType packetType, const u08 *const data, const u08 dataLength)
+void sendPacket(const u08 packetType, const u08 *const data, const u08 dataLength)
 {
 	//We must wait until the previous packet is done transmitting before modifying any transmit variables.
 	//We simply loop until the Data Register Empty Interrupt Enable bit is cleared.
@@ -121,14 +105,14 @@ void sendPacket(const DownlinkPacketType packetType, const u08 *const data, cons
 
 	//[0] and [1] are already filled with the start bytes, so start filling at [2]
 	transmitBuffer[2] = packetType;
-	transmitBuffer[3] = sequenceNum;
+	transmitBuffer[3] = downSequenceNum;
 	transmitBuffer[4] = dataLength;
 
 	//CRC-CCITT initializes all bits to 1
 	u16 crc = 0xFFFF;
 	//calculate CRC-CCITT over packetType, sequenceNum, dataLength, and data bytes
 	crc = _crc_ccitt_update(crc, packetType);
-	crc = _crc_ccitt_update(crc, sequenceNum);
+	crc = _crc_ccitt_update(crc, downSequenceNum);
 	crc = _crc_ccitt_update(crc, dataLength);
 
 	//copy data bytes into transmitBuffer and roll them into the CRC
@@ -142,8 +126,8 @@ void sendPacket(const DownlinkPacketType packetType, const u08 *const data, cons
 	transmitBuffer[5 + dataLength] = (u08)(crc >> 8);
 	transmitBuffer[6 + dataLength] = (u08)crc;
 
-	//increment sequenceNum
-	sequenceNum++;
+	//increment downSequenceNum
+	downSequenceNum++;
 
 	//setup variables used by the ISR
 	transmitIndex = 0;
@@ -171,7 +155,7 @@ ISR(USART0_UDRE_vect)
 	}
 	codeTrack(3);
 }
-/*
+
 //! This interrupt is triggered when a character is received on UART0 from the computer.
 ISR(USART0_RX_vect)
 {
@@ -190,15 +174,29 @@ ISR(USART0_RX_vect)
 		bufferOverfilledCounter++;
 	}
 	codeTrack(4);
-}*/
+}
+
+enum PacketStates
+{
+	STATE_Start1,
+	STATE_Start2,
+	STATE_PacketType,
+	STATE_SequenceNum,
+	STATE_DataLength,
+	STATE_DataSection,
+	STATE_CrcMsb,
+	STATE_CrcLsb,
+	NUM_States
+};
+
 
 //! Runs through a state machine with the received bytes.
 static void processPacketBuffer()
 {
 	static u08 processIndex = 0;
-	static u08 state = 0, receiveByte;
-	static u08 packetType, sequence, dataLength, dataCounter, dataLengthMayBeData;
-	static u16 computedChecksum, receivedChecksum;
+	static u08 state = STATE_Start1, receiveByte;
+	static u08 packetType, sequence, dataLength, dataCounter;
+	static u16 computedCRC, receivedCRC;
 	static u08 dataBuffer[DATA_SECTION_LENGTH];
 
 	while (processIndex != tail)
@@ -209,170 +207,150 @@ static void processPacketBuffer()
 		{
 			processIndex = 0;
 		}
-
+/*
 lcdCursor(0,0);
 printHexDigit(state);
 printChar(' ');
 printHex_u08(receiveByte);
 printChar(' ');
-
+*/
 
 		switch (state)
 		{
-			//START_BYTE1
-			case 0:
+			case STATE_Start1:
 				//we don't need to keep storing the byte in the buffer
 				head++;
 				if (receiveByte == START_BYTE1)
-					state = 1;
-				//else state = 0 (no change)
+				{
+					state = STATE_Start2;
+				}
+				//else state = STATE_Start1 (no change)
 				break;
-			//START_BYTE2
-			case 1:
+			case STATE_Start2:
 				//we don't need to keep storing the byte in the buffer
 				head++;
 				if (receiveByte == START_BYTE2)
-					state = 2;
+				{
+					state = STATE_PacketType;
+				}
 				else if (receiveByte != START_BYTE1)
-					state = 0;
-				//else receiveByte is START_BYTE1, so stay in state 1.
+				{
+					state = STATE_Start1;
+				}
+				//else receiveByte is START_BYTE1, so stay in STATE_Start2.
 				break;
-			//Packet Type
-			case 2:
+			case STATE_PacketType:
 				//we don't need to keep storing the byte in the buffer
 				head++;
-				//Check if this is a valid packet type for the ROV to receive.
-				if (receiveByte < LAST_UplinkPacketType)
+				//Check if this is a valid packet type to receive
+				if (receiveByte <= maxPacketType)
 				{
-					state = 3;
 					packetType = receiveByte;
+					state = STATE_SequenceNum;
 				}
 				else if (receiveByte == START_BYTE1)
-					state = 1;
+				{
+					state = STATE_Start2;
+				}
 				else
-					state = 0;
+				{
+					state = STATE_Start1;
+				}
 				break;
-			//Sequence Number
-			case 3:
+			case STATE_SequenceNum:
 				//we don't need to keep storing the byte in the buffer
 				head++;
+				//can't do any checking on sequence, so just store it
 				sequence = receiveByte;
-				//start computing the checkusum
-				computedChecksum = packetType + sequence;
-				//Determine the next state based on packetType since it varies by packet.
-				//Some packets have no data section, some have a fixed-length data section, and some have a variable-length data section.
-				switch (packetType)
-				{
-					case GET_VERSIONS:
-						dataLength = 0;
-						break;
-					case GET_STATS:
-						dataLength = 0;
-						break;
-					default:
-						//variable-length packet, go to Data Length state
-						state = 4;
-						break;
-				}
-				//don't modify the state variable if we already set it for a variable-length packet
-				if (state != 4)
-				{
-					//if the packet has no data section, jump to the Checksum MSB state
-					if (dataLength == 0)
-						state = 6;
-					//else go the Data section state
-					else
-					{
-						state = 5;
-						//initialize dataCounter used to count down data bytes in Data section state
-						dataCounter = dataLength;
-					}
-					dataLengthMayBeData = 0;
-				}
+				state = STATE_DataLength;
 				break;
-			//Data Length - this state is only used for variable-length packets, which transmit their data length
-			case 4:
+			case STATE_DataLength:
 				//we don't need to keep storing the byte in the buffer
 				head++;
-				//determine the maximum data length allowed by this packetType
-				u08 maxLength = 0; //TODO not being set
-				switch (packetType)
+
+				//Call the registered validator function to validate the
+				//dataLength allowed by this specific packetType.
+				bool valid;
+				if (validator != NULL)
 				{
-					/*case VARIABLE_PACKET1:
-						maxLength = VARIABLE_PACKET1_MAXLENGTH;
-						break;
-					case VARIABLE_PACKET2:
-						maxLength = VARIABLE_PACKET2_MAXLENGTH;
-						break;*/
-					default:
-						//Unsupported packetType - we may be out of sync so do parser recovery next.
-						//We are just using state 0 here as a flag to the following code, not necessarily going to state 0 next.
-						state = 0;
+					logDebug("call validator %d", packetType);
+					valid = validator(packetType, receiveByte);
 				}
-				//if we had an error (unsupported variable-length packetType or invalid data length), do parser recovery.
-				if (state == 0 || receiveByte > maxLength)
+				else
+				{
+					logDebug("no validator");
+					valid = (receiveByte <= MAX_PACKET_DATA);
+				}
+
+				//if length was invalid, do parser recovery.
+				if (!valid)
 				{
 					//check if the sequence number and data length have start bytes.
 					if (sequence == START_BYTE1 && receiveByte == START_BYTE2)
 					{
-						//looks like a start sequence, so go to Packet Type state
-						state = 2;
+						//looks like a start sequence, so go to STATE_PacketType
+						state = STATE_PacketType;
 					}
 					else if (receiveByte == START_BYTE1)
 					{
-						//go to START_BYTE2 state
-						state = 1;
+						state = STATE_Start2;
 					}
 					else
 					{
 						//reset packet parser to beginning
-						state = 0;
+						state = STATE_Start1;
 					}
 				}
 				else
 				{
-					//valid variable-length packetType and valid data length, so save data length
+					//data length is valid, so save it
 					dataLength = receiveByte;
-					//add to checksum
-					computedChecksum += dataLength;
-					//if dataLength is 0, jump to the Checksum MSB state
+					//CRC-CCITT initializes all bits to 1
+					computedCRC = 0xFFFF;
+					//calculate CRC-CCITT over packetType, sequenceNum, and dataLength
+					computedCRC = _crc_ccitt_update(computedCRC, packetType);
+					computedCRC = _crc_ccitt_update(computedCRC, sequence);
+					computedCRC = _crc_ccitt_update(computedCRC, dataLength);
+
 					if (dataLength == 0)
-						state = 6;
-					//else go to Data section state
+					{
+						//skip STATE_DataSection because there is no data
+						state = STATE_CrcMsb;
+					}
 					else
 					{
-						state = 5;
 						//initialize dataCounter used to count down data bytes in Data section state
 						dataCounter = dataLength;
-						dataLengthMayBeData = 1;
+						state = STATE_DataSection;
 					}
 				}
 				break;
 			//Data section, dataLength bytes long
-			case 5:
+			case STATE_DataSection:
 				//keep the data bytes in the circular buffer (don't modify head here)
-				//add to checksum
-				computedChecksum += receiveByte;
+				//add to CRC
+				computedCRC = _crc_ccitt_update(computedCRC, receiveByte);
 				dataCounter--;
-				//if all data has been received, advance to Checksum MSB state
+				//if all data has been received, advance to STATE_CrcMsb
 				if (dataCounter == 0)
-					state = 6;
+				{
+					state = STATE_CrcMsb;
+				}
 				break;
-			//16-bit Checksum MSB
-			case 6:
-				receivedChecksum = ((u16)receiveByte) << 8;
-				state = 7;
+			//MSB of 16-bit CRC-CCITT
+			case STATE_CrcMsb:
+				receivedCRC = ((u16)receiveByte) << 8;
+				state = STATE_CrcLsb;
 				break;
-			//16-bit Checksum LSB
-			case 7:
-				receivedChecksum |= receiveByte;
+			//LSB of 16-bit CRC-CCITT
+			case STATE_CrcLsb:
+				receivedCRC |= receiveByte;
 				//verify that the checksums match
-				if (receivedChecksum == computedChecksum)
+				if (receivedCRC == computedCRC)
 				{
 					codeTrack(5);
-					//Checksums matched, so copy the data section to another buffer to linearize it and free up space in receiveBuffer.
-					u08 i;
-					for (i = 0; i < dataLength; i++)
+					//CRC values matched, so copy the data section to another buffer to linearize it and free up space in receiveBuffer.
+					for (u08 i = 0; i < dataLength; i++)
 					{
 						dataBuffer[i] = receiveBuffer[head++];
 						//If head is now beyond the end of the buffer, wrap around to the beginning.
@@ -381,55 +359,40 @@ printChar(' ');
 							head = 0;
 						}
 					}
-					//Free up the space occupied by the two checksum characters in the receiveBuffer.
+					//Free up the space occupied by the two CRC bytes in the receiveBuffer.
 					head += 2;
 					//If head is now beyond the end of the buffer, wrap around to the beginning.
 					if (head >= RX_BUFFER_LENGTH)
 					{
 						head = head - RX_BUFFER_LENGTH;
 					}
-					executePacket(packetType, dataBuffer, dataLength);
+					//Call the registered exec function, if any
+					logDebug("exec packet %d", packetType);
+					if (executor != NULL)
+					{
+						executor(packetType, dataBuffer, dataLength);
+					}
 				}
 				else
 				{
+					logDebug("bad checksum %02X != %02X", computedCRC, receivedCRC);
 					codeTrack(6);
-					//Checksums don't match, packet is either corrupted or we are out of sync with a real packet boundary.
+					//CRC values don't match, packet is either corrupted or we are out of sync with a real packet boundary.
 					//Recover as rapidly as possible by searching for packet starts within the data we already received.
 
-					//if dataLength was read from the receiveBuffer, we have to check if it contains a start byte
-					if (dataLengthMayBeData)
+					//check if the sequence number and data length have start bytes.
+					if (sequence == START_BYTE1 && dataLength == START_BYTE2)
 					{
-						//check if the sequence number and data length have start bytes.
-						if (sequence == START_BYTE1 && dataLength == START_BYTE2)
-						{
-							//looks like a start sequence, so go to Packet Type state
-							state = 2;
-
-						}
-						else if (dataLength == START_BYTE1)
-						{
-							//go to START_BYTE2 state
-							state = 1;
-						}
-						else
-						{
-							//go to START_BYTE1 state
-							state = 0;
-						}
+						//looks like a start sequence, so go to Packet Type state
+						state = STATE_PacketType;
+					}
+					else if (dataLength == START_BYTE1)
+					{
+						state = STATE_Start2;
 					}
 					else
 					{
-						//check if the sequence number is a start byte.
-						if (sequence == START_BYTE1)
-						{
-							//go to START_BYTE2 state
-							state = 1;
-						}
-						else
-						{
-							//go to START_BYTE1 state
-							state = 0;
-						}
+						state = STATE_Start1;
 					}
 					//Back up the parser to re-process what we originally thought were data and checksum in the receiveBuffer.
 					processIndex = head;
@@ -438,29 +401,14 @@ printChar(' ');
 			default:
 				//Fell out of packet parser. This should be impossible.
 				ledOn();
-				state = 0;
+				SOFTWARE_FAULT("invalid parser state", state, processIndex);
+				state = STATE_Start1;
+				break;
 		}
-printHexDigit(state);
 	}
 }
 
-static void executePacket(const u08 packetType, const u08 * const data, const u08 dataLength)
-{
-codeTrack(7);
-	switch (packetType)
-	{
-		case GET_VERSIONS:
-			sendVersionData();
-			break;
-		case GET_STATS:
-			sendStats();
-			break;
-		default:
-			lowerLine();
-			printString("Unknown Pkt: ");
-			printHex_u08(packetType);
-	}
-}
+
 /*
 static void resetPolyBot(const u08 * const data)
 {

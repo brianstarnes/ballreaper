@@ -4,7 +4,6 @@
 /*! @file
     Implements support for controlling four brushed DC motors using two quad half H-bridge chips.
  */
-#include "globals.h"
 #include "motors.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>

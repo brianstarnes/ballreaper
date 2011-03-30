@@ -1,9 +1,10 @@
 #include "debug.h"
+#include "launcherPackets.h"
 #include "packetprotocol.h"
 #include "serial.h"
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 
 //Local prototypes
 static void sendLog(const DownlinkPacketType packetType, const char *messageFormat, const va_list args);
