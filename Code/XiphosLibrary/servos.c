@@ -206,23 +206,23 @@ void servoOff(const u08 servoNum)
 static inline void writeServoOutput(const u08 servoOutput)
 {
 	//put the new servo pin values on the data bus
-	writeBus(servoOutput);
+	PORTC = servoOutput;
 	//drive the octal D flip-flop's clock pin high to change it's values
-	sbi(PORTD, PD6);
+	sbi(PORTD, PD5);
 	//brief delay to ensure the values fully propagate to the D flip-flop
 	_delay_loop_1(1);
 	//drive the octal D flip-flop's clock pin low to latch the new values
-	cbi(PORTD, PD6);
+	cbi(PORTD, PD5);
 }
 
 //! This is the interrupt service routine to control 1-8 servos.
-ISR(TIMER1_COMPA_vect)
+ISR(TIMER3_COMPC_vect)
 {
 	if (high == TRUE)
 	{
 		//servo output was previously high, so set it low
 		writeServoOutput(0);
-		OCR1A += servoLowTime[activeServoNumber];
+		OCR3C += servoLowTime[activeServoNumber];
 		high = FALSE;
 	}
 	else
@@ -239,12 +239,12 @@ ISR(TIMER1_COMPA_vect)
 		if (servoHighTime[activeServoNumber] > 0)
 		{
 			writeServoOutput(_BV(activeServoNumber));
-			OCR1A += servoHighTime[activeServoNumber];
+			OCR3C += servoHighTime[activeServoNumber];
 			high = TRUE;
 		}
 		else
 		{
-			OCR1A += servoLowTime[activeServoNumber];
+			OCR3C += servoLowTime[activeServoNumber];
 		}
 	}
 }
@@ -252,7 +252,7 @@ ISR(TIMER1_COMPA_vect)
 /*! Initializes the servo timer and variables.
     Normally called only by the initialize() function in utility.c.
  */
-void servoInit()
+inline void servoInit()
 {
 	//Configure all servos with the default range and turn them off.
 	for (u08 i = 0; i < NUM_SERVOS; i++)
@@ -261,25 +261,17 @@ void servoInit()
 		setServoRange(i, SERVO_RANGE_DEFAULT);
 	}
 
-	//configure 74HC374AN (D Flip-Flop) clock pin used for servos as an output
-	sbi(DDRD, DDD6);
-
-	//Disable interrupts in this block to prevent motor ISR from
-	//messing with the data bus while we are trying to use it.
-	//ATOMIC_FORCEON is used so that we turn on interrupts afterwards.
-	ATOMIC_BLOCK(ATOMIC_FORCEON)
-	{
-		//initialize D flip-flop to all lows
-		writeServoOutput(0);
-	}
+	//configure 74LS374 (D Flip-Flop) clock pin as an output
+	sbi(DDRD, DDD5);
+	//initialize D flip-flop to all lows
+	writeServoOutput(0);
 
 	//enable timer (set prescaler to /8)
-	TCCR1B |= _BV(CS11);
+	TCCR3B |= _BV(CS31);
 
-	//enable interrupt for output compare unit 1A
-#if defined (__AVR_ATmega32__)
-	TIMSK |= _BV(OCIE1A);
-#elif defined (__AVR_ATmega644__) || defined(__AVR_ATmega644P__)
-	TIMSK1 |= _BV(OCIE1A);
-#endif
+	//enable interrupt for output compare unit 3C
+	TIMSK3 |= _BV(OCIE3C);
+
+	//enable interrupts
+	sei();
 }

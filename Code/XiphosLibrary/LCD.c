@@ -20,23 +20,38 @@
 //! LCD RAM address for the second line (row 1, col 0).
 #define SECOND_LINE  0XC0
 
+/*! Macro function to reverse the bit order of an 8-bit variable as efficiently as possible.
+    Should compile down to just 15 AVR assembly instructions, running in 15 clock cycles.
+    Note the use of the swap assembly instruction to swap the two nibbles of a register.
+    @param a The 8-bit variable to reverse.
+ */
+#define REVERSE(a) do                     \
+{                                         \
+  a=((a>>1)&0x55)|((a<<1)&0xAA);          \
+  a=((a>>2)&0x33)|((a<<2)&0xCC);          \
+  asm volatile("swap %0":"=r"(a):"0"(a)); \
+} while (0)
+
 //! Writes a byte of data to the LCD.
 static void writeLcd(u08 data)
 {
-	//Disable interrupts in this block to prevent motor/servo ISRs from
-	//messing with the data bus while we are trying to use it.
+	//Reverse the bit order of the data, due to LCD connections to the data bus being backwards.
+	//This line doesn't affect the bus, so this can be done before the interrupts are disabled.
+	REVERSE(data);
+	//Disable interrupts in this block to prevent the servo ISR (which shares the same data bus)
+	//from interrupting in the middle of the sequence and messing with the bus.
 	//ATOMIC_RESTORESTATE is used so that this function can be called from
 	//user code/ISRs without unexpected side effects.
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
 	{
 		//set the LCD's E (Enable) line high, so it can fall later
-		sbi(PORTB, PB0);
+		sbi(PORTD, PD6);
 		//write the data to the bus
-		writeBus(data);
+		PORTC = data;
 		//brief delay to allow the data to fully propagate to the LCD
 		delayUs(1);
 		//set the LCD's E (Enable) line low to latch in the data
-		cbi(PORTB, PB0);
+		cbi(PORTD, PD6);
 	}
 }
 
@@ -44,7 +59,7 @@ static void writeLcd(u08 data)
 static void writeControl(const u08 data)
 {
 	//set RS (Register Select) line low to select command register
-	cbi(PORTB, PB1);
+	cbi(PORTD, PD7);
 	writeLcd(data);
 	//wait for the instruction to be executed
 	delayUs(100);
@@ -72,14 +87,14 @@ void lcdOff()
 /*! Initializes the LCD as described in the HD44780 datasheet.
     Normally called only by the initialize() function in utility.c.
  */
-void lcdInit()
+inline void lcdInit()
 {
 	//configure LCD E (Enable) control pin as an output
-	sbi(DDRB, DDB0);
+	sbi(DDRD, DDD6);
 	//configure LCD RS (Register Select) control pin as an output
-	sbi(DDRB, DDB1);
-	//set LCD E (Enable) line low initially, so it can rise later
-	cbi(PORTB, PB0);
+	sbi(DDRD, DDD7);
+	//set LCD E (Enable) line low inititally, so it can rise later
+	cbi(PORTD, PD6);
 
 	//wait 15ms after power on
 	delayMs(15);
@@ -114,7 +129,7 @@ void lcdInit()
 void printChar(const u08 data)
 {
 	//set RS (Register Select) line high to select data register
-	sbi(PORTB, PB1);
+	sbi(PORTD, PD7);
 	writeLcd(data);
 	delayUs(50);
 }

@@ -6,7 +6,6 @@
  */
 
 #include "ADC.h"
-#include "globals.h"
 #include "LCD.h"
 #include "motors.h"
 #include "servos.h"

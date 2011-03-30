@@ -1,11 +1,11 @@
 #include "ADC.h"
 #include "debug.h"
-#include "globals.h"
+#include "launcherPackets.h"
 #include "LCD.h"
 #include "main.h"
 #include "motors.h"
 #include "packetprotocol.h"
-#include "remoteprotocol.h"
+#include "remoteControl.h"
 #include "serial.h"
 #include "servos.h"
 #include "utility.h"
@@ -21,39 +21,39 @@ static volatile u16 innerEncoderReading;
 static volatile u16 wallEncoderReading;
 static volatile s16 error;
 static volatile s16 totalError;
+static volatile bool pause = FALSE;
 
 //local prototypes
-void mainMenu();
-void runCompetition();
-void testMode();
-void polyBotRemote();
+static void mainMenu();
+static void runCompetition();
+static void testMode();
 
-void printVoltage(u16 milliVolts);
-u16 readLogicBattery();
-u16 readMotorBattery();
+static void printVoltage(u16 milliVolts);
 
-void launcherSpeed(u08 speed);
-void strafeRight();
-void pidDrive(s08 wallSpeed, s08 innerSpeed);
-void driveForward(s08 wallSpeed, s08 innerSpeed);
-void driveBackward(s08 wallSpeed, s08 innerSpeed);
-void turnLeft();
-void turnRight();
-void stop();
-void scraperDown();
-void scraperUp();
+static void pidDrive(s08 wallSpeed, s08 innerSpeed);
+//static void driveForward(s08 wallSpeed, s08 innerSpeed);
+static void driveBackward(s08 wallSpeed, s08 innerSpeed);
+static void turnLeft();
+static void stop();
 
-void printEncoderTicks();
-void haltRobot();
-void downLink();
+static void launcherSpeed(u08 speed);
+static void scraperDown();
+static void scraperUp();
+
+//static void downLink();
 
 //! Initializes PolyBotLibrary and timers, sends bootup packet, prints version.
 int main()
 {
+	//query what kind of reset caused this bootup
+	u08 resetCause = MCUSR;
+	//reset the MCU Status Register
+	MCUSR = 0;
+
 	initialize();
 	uart0Init();
 	initPacketDriver();
-	sendBootNotification();
+	sendBootNotification(resetCause);
 
 	//enable timer0 (set prescaler to /1024)
 	TCCR0B |= _BV(CS02) | _BV(CS00);
@@ -80,20 +80,42 @@ enum {
 	NUM_Options
 };
 
-//! Displays the main menu and runs the option that the user selects with the knob.
-void mainMenu()
+/*! Displays the main menu and runs the option that the user selects with the
+ *  scroll switches.
+ */
+static void mainMenu()
 {
-	u08 choice;
+	u08 choice = 0;
 	u08 previousChoice = 255;
 
 	clearScreen();
 	printString_P(PSTR("Main Menu"));
 
+	//configure scroll inputs
+	digitalDirection(SWITCH_SCROLL_UP, Direction_INPUT_PULLUP);
+	digitalDirection(SWITCH_SCROLL_DOWN, Direction_INPUT_PULLUP);
+
 	//loop until user makes a selection
 	do
 	{
-		u16 input = knob10();
-		choice = input * NUM_Options / NUM_ADC10_VALUES;
+		if (digitalInput(SWITCH_SCROLL_UP) == 0)
+		{
+			choice--;
+			if (choice >= NUM_Options)
+				choice = NUM_Options - 1;
+			//wait for switch to be released
+			while (digitalInput(SWITCH_SCROLL_UP) == 0)
+				;
+		}
+		else if (digitalInput(SWITCH_SCROLL_DOWN) == 0)
+		{
+			choice++;
+			if (choice >= NUM_Options)
+				choice = 0;
+			//wait for switch to be released
+			while (digitalInput(SWITCH_SCROLL_DOWN) == 0)
+				;
+		}
 
 		//redraw menu only when choice changes
 		if (choice != previousChoice)
@@ -113,7 +135,7 @@ void mainMenu()
 					break;
 				default:
 					printString_P(PSTR("invalid choice"));
-					SOFTWARE_FAULT(PSTR("invalid choice"), choice, input);
+					SOFTWARE_FAULT(PSTR("invalid choice"), choice, 0);
 					break;
 			}
 		}
@@ -152,8 +174,8 @@ void calibrate(int ticksPerSec, s08* wallMotorSpeed, s08* innerMotorSpeed)
 	while (cmdStep > 0) {
 
 		// command motor speeds
-		motor(MOTOR_WALL, *wallMotorSpeed);
-		motor(MOTOR_INNER, *innerMotorSpeed);
+		wallMotor(*wallMotorSpeed);
+		innerMotor(*innerMotorSpeed);
 
 		// reset encoder ticks and wait for encoder ticks to accumulate
 		totalInnerEncoderTicks = 0;
@@ -180,7 +202,7 @@ void calibrate(int ticksPerSec, s08* wallMotorSpeed, s08* innerMotorSpeed)
 }
 /************************************************************************************************/
 //! Runs the competition code.
-void runCompetition()
+static void runCompetition()
 {
 	u08 rearSideWallHit = 0;
 	u08 frontSideWallHit = 0;
@@ -188,8 +210,10 @@ void runCompetition()
 	s08 wallMotorSpeed;
 	s08 innerMotorSpeed;
 
-	motor(MOTOR_WALL, 35);
-	motor(MOTOR_INNER, 35);
+	configPacketProcessor(&validateLauncherPacket, &execLauncherPacket, LAST_UplinkPacketType - 1);
+
+	wallMotor(35);
+	innerMotor(35);
 
 	clearScreen();
 	upperLine();
@@ -265,7 +289,7 @@ void runCompetition()
 	stop();
 	launcherSpeed(180);
 
-	// Start Ball Reaping!  We only get 2 refills so make them count!
+	// Start Ball Reaping! We only get 2 refills so make them count!
     while (refills < 2)
 	{
     	static int i, j;
@@ -367,13 +391,17 @@ void runCompetition()
 } // End competition
 /************************************************************************************************/
 
-void launcherSpeed(u08 speed)
+void pauseCompetition()
 {
-	servo(SERVO_LEFT_LAUNCHER, speed);
-	servo(SERVO_RIGHT_LAUNCHER, speed);
+	pause = TRUE;
 }
 
-void pidDrive(s08 wallSpeed, s08 innerSpeed)
+void resumeCompetition()
+{
+	pause = FALSE;
+}
+
+static void pidDrive(s08 wallSpeed, s08 innerSpeed)
 {
 	s08 wallMotorSpeed;
 	s08 innerMotorSpeed;
@@ -390,8 +418,8 @@ void pidDrive(s08 wallSpeed, s08 innerSpeed)
 	if (innerMotorSpeed < 0)
 		innerMotorSpeed = 0;
 
-	motor(MOTOR_WALL, wallMotorSpeed);
-	motor(MOTOR_INNER, innerMotorSpeed);
+	wallMotor(wallMotorSpeed);
+	innerMotor(innerMotorSpeed);
 
 	/*
 	upperLine();
@@ -402,43 +430,43 @@ void pidDrive(s08 wallSpeed, s08 innerSpeed)
 	print_s16(totalInnerEncoderTicks);
 	*/
 }
-
-void driveForward(s08 wallSpeed, s08 innerSpeed)
+/*
+static void driveForward(s08 wallSpeed, s08 innerSpeed)
 {
-	motor(MOTOR_WALL,  wallSpeed);
-	motor(MOTOR_INNER, innerSpeed);
+	wallMotor(wallSpeed);
+	innerMotor(innerSpeed);
+}*/
+
+static void driveBackward(s08 wallSpeed, s08 innerSpeed)
+{
+	wallMotor(-wallSpeed);
+	innerMotor(-innerSpeed);
 }
 
-void driveBackward(s08 wallSpeed, s08 innerSpeed)
+static void turnLeft()
 {
-	motor(MOTOR_WALL, -wallSpeed);
-	motor(MOTOR_INNER, -innerSpeed);
+	wallMotor(TURN_SPEED_WALL_WHEEL);
+	innerMotor(-TURN_SPEED_INNER_WHEEL);
 }
 
-void turnLeft()
+static void stop()
 {
-	motor(MOTOR_WALL, TURN_SPEED_WALL_WHEEL);
-	motor(MOTOR_INNER, -TURN_SPEED_INNER_WHEEL);
+	wallMotor(0);
+	innerMotor(0);
 }
 
-void turnRight()
+static void launcherSpeed(u08 speed)
 {
-	motor(MOTOR_WALL, -40);
-	motor(MOTOR_INNER, 40);
+	servo(SERVO_LEFT_LAUNCHER, speed);
+	servo(SERVO_RIGHT_LAUNCHER, speed);
 }
 
-void stop()
-{
-	motor(MOTOR_WALL, 0);
-	motor(MOTOR_INNER, 0);
-}
-
-void scraperDown()
+static void scraperDown()
 {
 	servo(SERVO_SCRAPER, 0);
 }
 
-void scraperUp()
+static void scraperUp()
 {
 	servo(SERVO_SCRAPER, 200);
 }
@@ -455,7 +483,7 @@ enum {
 };
 
 //! Runs the Test Mode functionality.
-void testMode()
+static void testMode()
 {
 	printString_P(PSTR("Test Mode"));
 
@@ -543,19 +571,19 @@ void testMode()
 					/*
 					lowerLine();
 					printString_P(PSTR("Inner Motor"));
-					motor(MOTOR_INNER, 30);
+					innerMotor(30);
 					delayMs(750);
-					motor(MOTOR_INNER, -30);
+					innerMotor(-30);
 					delayMs(750);
-					motor(MOTOR_INNER, 0);
+					innerMotor(0);
 					delayMs(1000);
 					lowerLine();
 					printString_P(PSTR("Wall Motor "));
-					motor(MOTOR_WALL, 30);
+					wallMotor(30);
 					delayMs(750);
-					motor(MOTOR_WALL, -30);
+					wallMotor(-30);
 					delayMs(750);
-					motor(MOTOR_WALL, 0);
+					wallMotor(0);
 					*/
 					break;
 				default:
@@ -587,19 +615,7 @@ void testMode()
 	}
 }
 
-void polyBotRemote()
-{
-	printString_P(PSTR("PolyBot Remote"));
-	lowerLine();
-	printString_P(PSTR("System v" POLYBOT_REMOTE_VERSION));
-
-	//loop until exit, everything else is handled by interrupts
-	remoteExited = FALSE;
-	while(remoteExited == FALSE)
-		;
-}
-
-void printVoltage(u16 milliVolts)
+static void printVoltage(u16 milliVolts)
 {
 	//if there is a digit in the ten-thousands place
 	if (milliVolts >= 10000)
@@ -686,24 +702,14 @@ ISR(TIMER0_COMPA_vect)
 	totalError += error;
 }
 
-//! Prints the left and right wheel encoder ticks.
-void printEncoderTicks()
-{
-	lowerLine();
-	print_u08(innerEncoderTicks);
-	lcdCursor(1,8);
-	print_u08(wallEncoderTicks);
-}
-
 void haltRobot()
 {
 	//stop drive motors first
-	motor(MOTOR_INNER, 0);
-	motor(MOTOR_WALL, 0);
+	innerMotor(0);
+	wallMotor(0);
 
-	//raise scraper and power it off
+	//raise scraper
 	servo(SERVO_SCRAPER, SCRAPER_UP);
-	servoOff(SERVO_SCRAPER);
 
 	//stop feeder
 	servoOff(SERVO_FEEDER);
@@ -712,11 +718,15 @@ void haltRobot()
 	servo(SERVO_LEFT_LAUNCHER, LAUNCHER_SPEED_STOPPED);
 	servo(SERVO_RIGHT_LAUNCHER, LAUNCHER_SPEED_STOPPED);
 
-	clearScreen();
-	printString_P("HALTED!");
-}
+	//power off scraper after it has had time to raise
+	delayMs(500);
+	servoOff(SERVO_SCRAPER);
 
-void downLink()
+	clearScreen();
+	printString_P(PSTR("HALTED!"));
+}
+/*
+static void downLink()
 {
 	//pack all of the digital switches into one byte
 	u08 switches = digitalInput(SWITCH_BACK_WALL_LEFT) << 4;
@@ -733,4 +743,4 @@ void downLink()
 	downlinkData[4] = (u08)wallEncoderTicks;
 
 	sendPacket(TELEMETRY_DATA, downlinkData, sizeof(downlinkData));
-}
+}*/

@@ -2,21 +2,22 @@
 PROJECTNAME = main
 
 
-# Enter the name of the folder that contains the PolyBotLibrary files.
-# . means same folder, .. means parent folder, otherwise give a subfolder name like PolyBotLibrary or a relative path like ../PolyBotLibrary
-LIB = ../PolyBotLibrary
+# Enter the name of the folder that contains the XiphosLibrary files.
+# . means same folder, .. means parent folder, otherwise give a subfolder name like XiphosLibrary or a relative path like ../XiphosLibrary
+LIB = ../XiphosLibrary
 
 
-# Set these variables to specify which PolyBotLibrary features your program requires.
+# Set these variables to specify which XiphosLibrary features your program requires.
 # This affects which library files get compiled, as well as which functions are enabled.
 USE_LCD    = 1
 USE_ADC    = 1
-NUM_MOTORS = 2
+USE_MOTOR0 = 1
+USE_MOTOR1 = 1
 NUM_SERVOS = 4
-
+USE_I2C    = 0
 
 # Specify any additional .c source files containing your program code.
-FILES = debug.c packetprotocol.c remoteprotocol.c serial.c
+FILES = debug.c launcherPackets.c packetprotocol.c remoteControl.c serial.c
 
 
 # The rest of the makefile is pulled in from MasterMakefile.mk in the XiphosLibrary folder.

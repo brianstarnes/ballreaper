@@ -1,6 +1,8 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#include "globals.h"
+
 /*! Version of the Launcher firmware, part of the response to a ::GET_VERSIONS command.
     Should be incremented when new features or breaking changes are added.
  */
@@ -36,6 +38,11 @@
 //! The voltage (in milliVolts) at which to turn off servos and anything else possible on the logic battery.
 #define LOGIC_BATTERY_VOLTAGE_CUTOFF 3000 * LOGIC_BATTERY_NUM_CELLS
 
+//! The drive motor that is always on the inside of the course.
+#define innerMotor(speedAndDirection) motor0(speedAndDirection)
+//! The drive motor that always runs along the wall.
+#define wallMotor(speedAndDirection) motor1(speedAndDirection)
+
 #define REAR_SIDE_WALL_HIT  !digitalInput(SWITCH_SIDE_WALL_REAR)
 #define FRONT_SIDE_WALL_HIT !digitalInput(SWITCH_SIDE_WALL_FRONT)
 #define FRONT_HIT           !digitalInput(SWITCH_FRONT_WALL)
@@ -68,7 +75,9 @@ typedef enum
 	SWITCH_BACK_WALL_RIGHT = 1,
 	SWITCH_SIDE_WALL_REAR = 2,
 	SWITCH_SIDE_WALL_FRONT = 3,
-	SWITCH_FRONT_WALL = 4
+	SWITCH_FRONT_WALL = 4,
+	SWITCH_SCROLL_UP = 5,
+	SWITCH_SCROLL_DOWN = 6
 } switch_t;
 
 typedef enum
@@ -109,6 +118,10 @@ enum motorSpeeds
 };
 
 //Prototypes
-void mainMenu();
+u16 readLogicBattery();
+u16 readMotorBattery();
+void pauseCompetition();
+void resumeCompetition();
+void haltRobot();
 
 #endif

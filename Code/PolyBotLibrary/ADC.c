@@ -9,7 +9,7 @@
     62.5 ns/cpucycle * 128 cpucycle/aclock * 13 aclock/conversion = 104 us/conversion.
  */
 
-#include "globals.h"
+#include "ADC.h"
 #include <util/delay.h>
 
 /*! Initialize ADC.
