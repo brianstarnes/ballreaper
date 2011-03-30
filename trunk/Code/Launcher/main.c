@@ -141,6 +141,43 @@ void mainMenu()
 			break;
 	}
 }
+
+
+void calibrate(int ticksPerSec, s08* wallMotorSpeed, s08* innerMotorSpeed)
+{
+	*wallMotorSpeed = 50;
+	*innerMotorSpeed = 50;
+	int cmdStep = 25;
+
+	while (cmdStep > 0) {
+
+		// command motor speeds
+		motor(MOTOR_WALL, *wallMotorSpeed);
+		motor(MOTOR_INNER, *innerMotorSpeed);
+
+		// reset encoder ticks and wait for encoder ticks to accumulate
+		totalInnerEncoderTicks = 0;
+		totalWallEncoderTicks = 0;
+		delayMs(1000);
+
+		int innerTicksPerSec = totalInnerEncoderTicks;
+		int wallTicksPerSec = totalInnerEncoderTicks;
+
+		// adjust inner motor speed
+		if (innerTicksPerSec > ticksPerSec)
+			*innerMotorSpeed -= cmdStep;
+		else if (innerTicksPerSec < ticksPerSec)
+			*innerMotorSpeed += cmdStep;
+
+		// adjust wall motor speed
+		if (wallTicksPerSec > ticksPerSec)
+			*wallMotorSpeed -= cmdStep;
+		else if (wallTicksPerSec < ticksPerSec)
+			*wallMotorSpeed += cmdStep;
+		cmdStep = cmdStep/2;
+	}
+	stop();
+}
 /************************************************************************************************/
 //! Runs the competition code.
 void runCompetition()
@@ -148,6 +185,35 @@ void runCompetition()
 	u08 rearSideWallHit = 0;
 	u08 frontSideWallHit = 0;
 	u08 refills = 0;
+	s08 wallMotorSpeed;
+	s08 innerMotorSpeed;
+
+	motor(MOTOR_WALL, 35);
+	motor(MOTOR_INNER, 35);
+
+	clearScreen();
+	upperLine();
+	printString_P(PSTR("going 46 ticks"));
+
+	while(totalInnerEncoderTicks < 46);
+	stop();
+
+	clearScreen();
+	upperLine();
+	printString_P(PSTR("went 46 ticks"));
+
+	buttonWait();
+
+	calibrate(25, &wallMotorSpeed, &innerMotorSpeed);
+	clearScreen();
+	upperLine();
+	printString_P(PSTR("cmds for 46 tps:"));
+	lowerLine();
+	print_s08(wallMotorSpeed);
+	printChar(' ');
+	print_s08(innerMotorSpeed);
+
+	buttonWait();
 
 	clearScreen();
 	lowerLine();
