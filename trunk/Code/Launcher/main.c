@@ -228,7 +228,7 @@ static void runCompetition()
 
 	buttonWait();
 
-	calibrate(25, &wallMotorSpeed, &innerMotorSpeed);
+	calibrate(20, &wallMotorSpeed, &innerMotorSpeed);
 	clearScreen();
 	upperLine();
 	printString_P(PSTR("cmds for 46 tps:"));
