@@ -24,6 +24,7 @@ bool buttonHeld();
 void ledOn();
 void ledOff();
 void ledToggle();
+void analogPullups(const u08 pullups);
 void digitalDirection(u08 num, const DigitalDirection direction);
 void digitalDirections(const u16 directions);
 void digitalPullups(const u16 pullups);

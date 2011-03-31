@@ -151,6 +151,26 @@ void ledToggle()
 	tbi(PORTG, PG2);
 }
 
+/*! Sets the pullup resistor options for all 8 analog pins, using one bit per pin.
+    Pullup option will only be set for a pin if the pin is currently configured as an input.
+    @param pullups Bit 0 (LSB) matches analog0 ... bit 7 matches analog7.
+    A high (1) will enable the pullup. A low (0) will disable the pullup.
+    @see Use analogPullup() if you only want to configure the pullup for a single analog pin.
+*/
+void analogPullups(const u08 pullups)
+{
+	for (u08 i = 0; i < 8; i++)
+	{
+		if (gbi(DDRF, i) == 0)
+		{
+			if (gbi(pullups, i))
+				sbi(PORTF, i); //enable pullup
+			else
+				cbi(PORTF, i); //disable pullup
+		}
+	}
+}
+
 /*! Sets the direction and pullup resistor option for a digital pin.
     @param num Selects the digital pin (0 to 9).
     @param direction Specifies the direction and pullup for the digital pin.
@@ -159,22 +179,20 @@ void ledToggle()
  */
 void digitalDirection(u08 num, const DigitalDirection direction)
 {
-	if (num > 1)
+	if (num == 0)
 	{
-		//adjust num offset here to simplify the code below
-		num -= 2;
 		switch (direction)
 		{
 		case Direction_INPUT:
-			cbi(DDRA, num);  //input direction
-			cbi(PORTA, num); //disable pullup
+			cbi(DDRB, DDB4);  //input direction
+			cbi(PORTB, PB4); //disable pullup
 			break;
 		case Direction_INPUT_PULLUP:
-			cbi(DDRA, num);  //input direction
-			sbi(PORTA, num); //enable pullup
+			cbi(DDRB, DDB4);  //input direction
+			sbi(PORTB, PB4); //enable pullup
 			break;
 		case Direction_OUTPUT:
-			sbi(DDRA, num);  //output direction
+			sbi(DDRB, DDB4);  //output direction
 			break;
 		}
 	}
@@ -195,20 +213,22 @@ void digitalDirection(u08 num, const DigitalDirection direction)
 			break;
 		}
 	}
-	else if (num == 0)
+	else if (num <= 9)
 	{
+		//adjust num offset here to simplify the code below
+		num -= 2;
 		switch (direction)
 		{
 		case Direction_INPUT:
-			cbi(DDRB, DDB4);  //input direction
-			cbi(PORTB, PB4); //disable pullup
+			cbi(DDRA, num);  //input direction
+			cbi(PORTA, num); //disable pullup
 			break;
 		case Direction_INPUT_PULLUP:
-			cbi(DDRB, DDB4);  //input direction
-			sbi(PORTB, PB4); //enable pullup
+			cbi(DDRA, num);  //input direction
+			sbi(PORTA, num); //enable pullup
 			break;
 		case Direction_OUTPUT:
-			sbi(DDRB, DDB4);  //output direction
+			sbi(DDRA, num);  //output direction
 			break;
 		}
 	}
