@@ -1,4 +1,5 @@
 #include "ADC.h"
+#include <util/atomic.h>
 #include "debug.h"
 #include "launcherPackets.h"
 #include "LCD.h"
@@ -31,8 +32,6 @@ static void testMode();
 static void printVoltage(u16 milliVolts);
 
 static void pidDrive(s08 wallSpeed, s08 innerSpeed);
-//static void driveForward(s08 wallSpeed, s08 innerSpeed);
-static void driveBackward(s08 wallSpeed, s08 innerSpeed);
 static void turnLeft();
 static void stop();
 
@@ -55,8 +54,14 @@ int main()
 	initPacketDriver();
 	sendBootNotification(resetCause);
 
-	//enable timer0 (set prescaler to /1024)
-	TCCR0B |= _BV(CS02) | _BV(CS00);
+	digitalPullups(0xFF);
+	digitalDirections(0);
+	adcInit();
+	sbi(PORTF, PF0);
+	sbi(PORTF, PF1);
+
+	//enable timer0 (set prescaler to /64)
+	TCCR0B |= _BV(CS02);// | _BV(CS00);
 	//enable interrupt for timer0 output compare unit A
 	TIMSK0 |= _BV(OCIE0A);
 
@@ -68,6 +73,9 @@ int main()
 
 	while (1)
 	{
+
+		runCompetition();
+
 		mainMenu();
 	}
 }
@@ -92,8 +100,8 @@ static void mainMenu()
 	printString_P(PSTR("Main Menu"));
 
 	//configure scroll inputs
-	digitalDirection(SWITCH_SCROLL_UP, Direction_INPUT_PULLUP);
-	digitalDirection(SWITCH_SCROLL_DOWN, Direction_INPUT_PULLUP);
+	//digitalDirection(SWITCH_SCROLL_UP, Direction_INPUT_PULLUP);
+	//digitalDirection(SWITCH_SCROLL_DOWN, Direction_INPUT_PULLUP);
 
 	//loop until user makes a selection
 	do
@@ -196,6 +204,7 @@ void calibrate(int ticksPerSec, s08* wallMotorSpeed, s08* innerMotorSpeed)
 			*wallMotorSpeed -= cmdStep;
 		else if (wallTicksPerSec < ticksPerSec)
 			*wallMotorSpeed += cmdStep;
+
 		cmdStep = cmdStep/2;
 	}
 	stop();
@@ -207,37 +216,19 @@ static void runCompetition()
 	u08 rearSideWallHit = 0;
 	u08 frontSideWallHit = 0;
 	u08 refills = 0;
-	s08 wallMotorSpeed;
-	s08 innerMotorSpeed;
 
 	configPacketProcessor(&validateLauncherPacket, &execLauncherPacket, LAST_UplinkPacketType - 1);
 
-	wallMotor(35);
-	innerMotor(35);
-
 	clearScreen();
-	upperLine();
-	printString_P(PSTR("going 46 ticks"));
-
-	while(totalInnerEncoderTicks < 46);
-	stop();
-
-	clearScreen();
-	upperLine();
-	printString_P(PSTR("went 46 ticks"));
+	printString_P(PSTR("Press Button"));
 
 	buttonWait();
 
-	calibrate(20, &wallMotorSpeed, &innerMotorSpeed);
-	clearScreen();
-	upperLine();
-	printString_P(PSTR("cmds for 46 tps:"));
-	lowerLine();
-	print_s08(wallMotorSpeed);
-	printChar(' ');
-	print_s08(innerMotorSpeed);
-
-	buttonWait();
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+	{
+	    innerEncoderTicks = 0;
+		wallEncoderTicks = 0;
+	}
 
 	clearScreen();
 	lowerLine();
@@ -263,12 +254,12 @@ static void runCompetition()
     turnLeft();
 
 	// Turn left 90 degrees
-	while(innerEncoderTicks < 20 || wallEncoderTicks < 20);
+	while(innerEncoderTicks < 26 || wallEncoderTicks < 26);
 
 	innerEncoderTicks = 0;
     wallEncoderTicks = 0;
 
-    pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
+    pidDrive(TURN_SPEED_WALL_WHEEL, TURN_SPEED_INNER_WHEEL);
 	delayMs(100);
 
 	// make sure that the robot turned the full 90 degrees and itsn't stuck on the wall with the wheels not moving
@@ -282,7 +273,7 @@ static void runCompetition()
 
 		turnLeft();
 		while(innerEncoderTicks < 7 && wallEncoderTicks < 7);
-		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
+		pidDrive(TURN_SPEED_WALL_WHEEL, TURN_SPEED_INNER_WHEEL);
 		delayMs(100);
 	}
 
@@ -306,32 +297,35 @@ static void runCompetition()
 		{
 			if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
 			{
-				if (!REAR_SIDE_WALL_HIT)
-				{
-					i++;
-					if (i > 5)
-						i = 5;
-					pidDrive(SLOW_SPEED_WALL_WHEEL + i, SLOW_SPEED_INNER_WHEEL);
-				}
-				else if (i > 0)
-					i--;
-
-				if (!FRONT_SIDE_WALL_HIT)
-				{
-					j++;
-					if (j > 5)
-						j = 5;
-					pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
-				}
-				else if (j > 0)
+				//lost the wall
+				j++;
+				if (j > 5)
+					j = 5;
+				pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
+			}
+			else if (!REAR_SIDE_WALL_HIT)
+			{
+				i++;
+				if (j > 0)
 					j--;
+				if (i > 5)
+					i = 5;
+				pidDrive(SLOW_SPEED_WALL_WHEEL + i, SLOW_SPEED_INNER_WHEEL);
+			}
+			else if (!FRONT_SIDE_WALL_HIT)
+			{
+				j++;
+				if (i > 0)
+					i--;
+				if (j > 5)
+					j = 5;
+				pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
 			}
 			else
 			{
 				pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
 				i = j = 0;
 			}
-			delayMs(200);
 		}
 
 		stop();
@@ -347,34 +341,37 @@ static void runCompetition()
 		{
 			if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
 			{
-				if (!REAR_SIDE_WALL_HIT)
-				{
-					i++;
-					if (i > 5)
-						i = 5;
-					driveBackward(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + i);
-				}
-				else if (i > 0)
+				//lost the wall
+				i++;
+				if (j > 0)
+					j--;
+				if (i > 5)
+					i = 5;
+				pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - i);
+			}
+			else if (!REAR_SIDE_WALL_HIT)
+			{
+				i++;
+				if (j > 0)
+					j--;
+				if (i > 5)
+					i = 5;
+				pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - i);
+			}
+			else if (!FRONT_SIDE_WALL_HIT)
+			{
+				j++;
+				if (i > 0)
 					i--;
-				else
-				{
-					if (!FRONT_SIDE_WALL_HIT)
-					{
-						j++;
-						if (j > 5)
-							j = 5;
-						driveBackward(SLOW_SPEED_WALL_WHEEL + j, SLOW_SPEED_INNER_WHEEL);
-					}
-					else if (j > 0)
-						j--;
-				}
+				if (j > 5)
+					j = 5;
+				pidDrive(-SLOW_SPEED_WALL_WHEEL - j, -SLOW_SPEED_INNER_WHEEL);
 			}
 			else
 			{
-				driveBackward(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
+				pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
 				i = j = 0;
 			}
-			delayMs(300);
 		}
 
 		refills++;
@@ -405,18 +402,34 @@ static void pidDrive(s08 wallSpeed, s08 innerSpeed)
 {
 	s08 wallMotorSpeed;
 	s08 innerMotorSpeed;
-	float Kp = 0.5;
+	float Kp = 0.15;
+	//float Ki = 0.15;
 
 	// If wall motor is counting ticks faster error will be negative, error is calculated in the interrupt.
-	wallMotorSpeed  = (s08)(wallSpeed  + (Kp * error));
-	innerMotorSpeed = (s08)(innerSpeed - (Kp * error));
+	if (wallSpeed > 0)
+	{
+		wallMotorSpeed  = (s08)(wallSpeed  + (Kp * error)); //+ (Ki * totalError));
+		innerMotorSpeed = (s08)(innerSpeed - (Kp * error)); //- (Ki * totalError));
 
-	// limit error from making motor speed go negative and turning the wheel backwards
-	if (wallMotorSpeed < 0)
-		wallMotorSpeed = 0;
+		// limit error from making motor speed go negative and turning the wheel backwards
+		if (wallMotorSpeed < 0)
+			wallMotorSpeed = 0;
 
-	if (innerMotorSpeed < 0)
-		innerMotorSpeed = 0;
+		if (innerMotorSpeed < 0)
+			innerMotorSpeed = 0;
+	}
+	else
+	{
+		wallMotorSpeed  = (s08)(wallSpeed  - (Kp * error)); //+ (Ki * totalError));
+		innerMotorSpeed = (s08)(innerSpeed + (Kp * error)); //- (Ki * totalError));
+
+		// limit error from making motor speed go negative and turning the wheel backwards
+		if (wallMotorSpeed > 0)
+			wallMotorSpeed = 0;
+
+		if (innerMotorSpeed > 0)
+			innerMotorSpeed = 0;
+	}
 
 	wallMotor(wallMotorSpeed);
 	innerMotor(innerMotorSpeed);
@@ -429,18 +442,6 @@ static void pidDrive(s08 wallSpeed, s08 innerSpeed)
 	printChar(' ');
 	print_s16(totalInnerEncoderTicks);
 	*/
-}
-/*
-static void driveForward(s08 wallSpeed, s08 innerSpeed)
-{
-	wallMotor(wallSpeed);
-	innerMotor(innerSpeed);
-}*/
-
-static void driveBackward(s08 wallSpeed, s08 innerSpeed)
-{
-	wallMotor(-wallSpeed);
-	innerMotor(-innerSpeed);
 }
 
 static void turnLeft()
@@ -463,12 +464,14 @@ static void launcherSpeed(u08 speed)
 
 static void scraperDown()
 {
-	servo(SERVO_SCRAPER, 0);
+	servo(SERVO_SCRAPER, SCRAPER_MOSTLY_DOWN);
+	delayMs(400);
+	servo(SERVO_SCRAPER, SCRAPER_DOWN);;
 }
 
 static void scraperUp()
 {
-	servo(SERVO_SCRAPER, 200);
+	servo(SERVO_SCRAPER, SCRAPER_UP);
 }
 
 //! Test Mode pages.
