@@ -39,9 +39,9 @@
 #define LOGIC_BATTERY_VOLTAGE_CUTOFF 3000 * LOGIC_BATTERY_NUM_CELLS
 
 //! The drive motor that is always on the inside of the course.
-#define innerMotor(speedAndDirection) motor0(speedAndDirection)
+#define innerMotor(speedAndDirection) motor0(127 + speedAndDirection)
 //! The drive motor that always runs along the wall.
-#define wallMotor(speedAndDirection) motor1(speedAndDirection)
+#define wallMotor(speedAndDirection) motor1(127 + speedAndDirection)
 
 #define REAR_SIDE_WALL_HIT  !digitalInput(SWITCH_SIDE_WALL_REAR)
 #define FRONT_SIDE_WALL_HIT !digitalInput(SWITCH_SIDE_WALL_FRONT)
@@ -61,7 +61,7 @@ enum servoPositions
 {
 	SCRAPER_DOWN = 4, //!< The final position to lower the scraper arm to to collect balls.
 	SCRAPER_MOSTLY_DOWN = 10, //!< The initial position to lower the scraper arm to to avoid whacking the trough.
-	SCRAPER_UP = 89, //134, //!< The raised position for the scraper arm.
+	SCRAPER_UP = 134, //!< The raised position for the scraper arm.
 	FEEDER_STOPPED = 128,
 	FEEDER_RUNNING = 140,
 	LAUNCHER_SPEED_STOPPED = 128, //!< The center servo setting that the Sabertooth interprets as stopped.
@@ -82,10 +82,10 @@ typedef enum
 
 typedef enum
 {
-	ANALOG_MOTOR_BATTERY = 0, //!< The analog input that reads the motor battery, via a voltage divider.
-	ANALOG_LOGIC_BATTERY = 1, //!< The analog input that reads the logic/servo battery, via a voltage divider.
-	ANALOG_WHEEL_ENCODER_INNER = 8, //!< The left wheel encoder (QRB-1114 reflective sensor).
-	ANALOG_WHEEL_ENCODER_WALL = 9, //!< The right wheel encoder (QRB-1114 reflective sensor).
+	ANALOG_MOTOR_BATTERY = 3, //!< The analog input that reads the motor battery, via a voltage divider.
+	ANALOG_LOGIC_BATTERY = 4, //!< The analog input that reads the logic/servo battery, via a voltage divider.
+	ANALOG_WHEEL_ENCODER_INNER = 0, //!< The left wheel encoder (QRB-1114 reflective sensor).
+	ANALOG_WHEEL_ENCODER_WALL = 1, //!< The right wheel encoder (QRB-1114 reflective sensor).
 } analog_t;
 
 //! The number of black and white stripes on the encoder wheel
@@ -109,12 +109,12 @@ typedef enum
 //wall motor is stronger/faster
 enum motorSpeeds
 {
-	FAST_SPEED_INNER_WHEEL = 25,
-	FAST_SPEED_WALL_WHEEL = 25,
-	SLOW_SPEED_INNER_WHEEL = 21,
-	SLOW_SPEED_WALL_WHEEL = 21,
-	TURN_SPEED_INNER_WHEEL = 30,
-	TURN_SPEED_WALL_WHEEL = 30
+	FAST_SPEED_INNER_WHEEL = 35,
+	FAST_SPEED_WALL_WHEEL = 35,
+	SLOW_SPEED_INNER_WHEEL = 29,
+	SLOW_SPEED_WALL_WHEEL = 29,
+	TURN_SPEED_INNER_WHEEL = 50,
+	TURN_SPEED_WALL_WHEEL = 50
 };
 
 //Prototypes
