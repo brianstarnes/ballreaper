@@ -10,8 +10,8 @@
 //Version of the Remote System firmware - should be updated when new features or breaking changes are added
 #define REMOTE_SYSTEM_VERSION "3.0"
 
-//Version of the PolyBot board being used - etched in copper on the board's back side at the bottom right
-//Note: this version is simply inferred based on MCU setting in the Makefile that the code is compiled with
+//Version of the board being used.
+//Note: this version is simply inferred based on MCU setting in the Makefile that the code is compiled with.
 //Therefore it may not be accurate if someone is using a different chip in their board.
 #if defined (__AVR_ATmega32__)
 	#define BOARD_VERSION "PolyBot 1.0"
@@ -26,7 +26,7 @@
 //Build a version string
 #define VERSION REMOTE_SYSTEM_VERSION "|" BOARD_VERSION "|" __AVR_LIBC_VERSION_STRING__ "|" __AVR_LIBC_DATE_STRING__
 
-//PolyBot Remote System Commands
+//Remote System Commands
 //***The biggest command is PRINT_STRING with 1 command byte, 16 characters for the LCD line, and a null terminator
 #define MAX_DATA 18
 
@@ -84,6 +84,6 @@ enum Responses
 extern volatile bool remoteExited;
 
 //Prototypes
-void polyBotRemote();
+void runRemoteSystem();
 
 #endif

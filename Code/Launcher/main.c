@@ -38,10 +38,12 @@ static void stop();
 static void launcherSpeed(u08 speed);
 static void scraperDown();
 static void scraperUp();
+static void feederOn();
+static void feederOff();
 
 //static void downLink();
 
-//! Initializes PolyBotLibrary and timers, sends bootup packet, prints version.
+//! Initializes XiphosLibrary, pullups, and timers, sends bootup packet, prints version.
 int main()
 {
 	//query what kind of reset caused this bootup
@@ -54,28 +56,24 @@ int main()
 	initPacketDriver();
 	sendBootNotification(resetCause);
 
-	digitalPullups(0xFF);
+	//configure all digital pins as inputs
 	digitalDirections(0);
-	adcInit();
-	sbi(PORTF, PF0);
-	sbi(PORTF, PF1);
+	//enable pullup resistors for all 10 digital inputs
+	digitalPullups(0x3FF);
+	//enable pullup resistors for all 8 analog inputs
+	analogPullups(0xFF);
 
 	//enable timer0 (set prescaler to /64)
 	TCCR0B |= _BV(CS02);// | _BV(CS00);
 	//enable interrupt for timer0 output compare unit A
 	TIMSK0 |= _BV(OCIE0A);
 
-	//wait for button to be released, if it is already down from skipping bootloader
-	while (getButton1());
 	//print firmware version and wait for button press
 	printString_P(PSTR("ballReaper v" LAUNCHER_FIRMWARE_VERSION));
 	buttonWait();
 
 	while (1)
 	{
-
-		runCompetition();
-
 		mainMenu();
 	}
 }
@@ -84,7 +82,7 @@ int main()
 enum {
 	Option_RunCompetition,
 	Option_TestMode,
-	Option_PolyBotRemote,
+	Option_RunRemoteSystem,
 	NUM_Options
 };
 
@@ -110,7 +108,9 @@ static void mainMenu()
 		{
 			choice--;
 			if (choice >= NUM_Options)
+			{
 				choice = NUM_Options - 1;
+			}
 			//wait for switch to be released
 			while (digitalInput(SWITCH_SCROLL_UP) == 0)
 				;
@@ -119,7 +119,9 @@ static void mainMenu()
 		{
 			choice++;
 			if (choice >= NUM_Options)
+			{
 				choice = 0;
+			}
 			//wait for switch to be released
 			while (digitalInput(SWITCH_SCROLL_DOWN) == 0)
 				;
@@ -138,8 +140,8 @@ static void mainMenu()
 				case Option_TestMode:
 					printString_P(PSTR("2 Test Mode     "));
 					break;
-				case Option_PolyBotRemote:
-					printString_P(PSTR("3 PolyBot Remote"));
+				case Option_RunRemoteSystem:
+					printString_P(PSTR("3 Remote System "));
 					break;
 				default:
 					printString_P(PSTR("invalid choice"));
@@ -163,8 +165,8 @@ static void mainMenu()
 		case Option_TestMode:
 			testMode();
 			break;
-		case Option_PolyBotRemote:
-			polyBotRemote();
+		case Option_RunRemoteSystem:
+			runRemoteSystem();
 			break;
 		default:
 			SOFTWARE_FAULT(PSTR("invalid choice"), choice, 0);
@@ -224,7 +226,7 @@ static void runCompetition()
 
 	buttonWait();
 
-	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+	ATOMIC_BLOCK(ATOMIC_FORCEON)
 	{
 	    innerEncoderTicks = 0;
 		wallEncoderTicks = 0;
@@ -262,7 +264,7 @@ static void runCompetition()
     pidDrive(TURN_SPEED_WALL_WHEEL, TURN_SPEED_INNER_WHEEL);
 	delayMs(100);
 
-	// make sure that the robot turned the full 90 degrees and itsn't stuck on the wall with the wheels not moving
+	// make sure that the robot turned the full 90 degrees and isn't stuck on the wall with the wheels not moving
 	while (BACK_RIGHT_HIT        ||
 		   BACK_LEFT_HIT         ||
 		   innerEncoderTicks < 5 ||
@@ -279,6 +281,7 @@ static void runCompetition()
 
 	stop();
 	launcherSpeed(180);
+	feederOn();
 
 	// Start Ball Reaping! We only get 2 refills so make them count!
     while (refills < 2)
@@ -378,12 +381,12 @@ static void runCompetition()
 	}
 
 	// Done, declare domination!
-	stop();
+    haltRobot();
 	clearScreen();
 	printString_P(PSTR("  Dominated!!"));
 	lowerLine();
 	printString_P(PSTR("ReapedYourBalls"));
-    while(1);
+    buttonWait();
 
 } // End competition
 /************************************************************************************************/
@@ -466,12 +469,22 @@ static void scraperDown()
 {
 	servo(SERVO_SCRAPER, SCRAPER_MOSTLY_DOWN);
 	delayMs(400);
-	servo(SERVO_SCRAPER, SCRAPER_DOWN);;
+	servo(SERVO_SCRAPER, SCRAPER_DOWN);
 }
 
 static void scraperUp()
 {
 	servo(SERVO_SCRAPER, SCRAPER_UP);
+}
+
+static void feederOn()
+{
+	servo(SERVO_FEEDER, FEEDER_RUNNING);
+}
+
+static void feederOff()
+{
+	servoOff(SERVO_FEEDER);
 }
 
 //! Test Mode pages.
@@ -514,12 +527,10 @@ static void testMode()
 				printString_P(PSTR("W EncoderTicks I"));
 				break;
 			case TEST_EncoderReadings:
-				//encoder readings
 				printString_P(PSTR("W EncoderInput I"));
 				break;
 			case TEST_DriveMotors:
-				//Drive motor test
-				//printString_P(PSTR("Drive Motor Test"));
+				printString_P(PSTR("W pidDrive I"));
 				break;
 			default:
 				printString_P(PSTR("invalid testpage"));
@@ -569,25 +580,11 @@ static void testMode()
 					print_u16(innerEncoderReading);
 					break;
 				case TEST_DriveMotors:
-					//drive motor tests
-					pidDrive(25, 25);
-					/*
+					pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
 					lowerLine();
-					printString_P(PSTR("Inner Motor"));
-					innerMotor(30);
-					delayMs(750);
-					innerMotor(-30);
-					delayMs(750);
-					innerMotor(0);
-					delayMs(1000);
-					lowerLine();
-					printString_P(PSTR("Wall Motor "));
-					wallMotor(30);
-					delayMs(750);
-					wallMotor(-30);
-					delayMs(750);
-					wallMotor(0);
-					*/
+					print_u16(wallEncoderTicks);
+					printChar(' ');
+					print_u16(innerEncoderTicks);
 					break;
 				default:
 					printString_P(PSTR("invalid testpage"));
@@ -614,7 +611,36 @@ static void testMode()
 				//break out of the inner update loop
 				break;
 			}
+			//poll scroll switches
+			else if (digitalInput(SWITCH_SCROLL_UP) == 0)
+			{
+				page--;
+				if (page >= NUM_Tests)
+				{
+					page = NUM_Tests - 1;
+				}
+				//wait for switch to be released
+				while (digitalInput(SWITCH_SCROLL_UP) == 0)
+					;
+				//break out of the inner update loop
+				break;
+			}
+			else if (digitalInput(SWITCH_SCROLL_DOWN) == 0)
+			{
+				page++;
+				if (page >= NUM_Tests)
+				{
+					page = 0;
+				}
+				//wait for switch to be released
+				while (digitalInput(SWITCH_SCROLL_DOWN) == 0)
+					;
+				//break out of the inner update loop
+				break;
+			}
 		}
+		//stop/reset any motors/servos that might have been changed
+		haltRobot();
 	}
 }
 
@@ -712,10 +738,10 @@ void haltRobot()
 	wallMotor(0);
 
 	//raise scraper
-	servo(SERVO_SCRAPER, SCRAPER_UP);
+	scraperUp();
 
 	//stop feeder
-	servoOff(SERVO_FEEDER);
+	feederOff();
 
 	//stop launchers
 	servo(SERVO_LEFT_LAUNCHER, LAUNCHER_SPEED_STOPPED);

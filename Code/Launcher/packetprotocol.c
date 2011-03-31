@@ -53,7 +53,7 @@ static void processPacketBuffer();
 //static void resetPolyBot(const u08 * const data);
 static void codeTrack(const u08 num);
 //static void printCodeTracks();
-
+static u16 updateCrcCcitt(const u16 crc, const u08 dataByte);
 
 
 void configPacketProcessor(ValidateDataLengthCallback_t newValidator, ExecCallback_t newExecutor, u08 newMaxPacketType)
@@ -111,15 +111,15 @@ void sendPacket(const u08 packetType, const u08 *const data, const u08 dataLengt
 	//CRC-CCITT initializes all bits to 1
 	u16 crc = 0xFFFF;
 	//calculate CRC-CCITT over packetType, sequenceNum, dataLength, and data bytes
-	crc = _crc_ccitt_update(crc, packetType);
-	crc = _crc_ccitt_update(crc, downSequenceNum);
-	crc = _crc_ccitt_update(crc, dataLength);
+	crc = updateCrcCcitt(crc, packetType);
+	crc = updateCrcCcitt(crc, downSequenceNum);
+	crc = updateCrcCcitt(crc, dataLength);
 
 	//copy data bytes into transmitBuffer and roll them into the CRC
 	for (u08 i = 0; i < dataLength; i++)
 	{
 		transmitBuffer[5 + i] = data[i];
-		crc = _crc_ccitt_update(crc, data[i]);
+		crc = updateCrcCcitt(crc, data[i]);
 	}
 
 	//store the CRC, MSB first
@@ -308,9 +308,9 @@ printChar(' ');
 					//CRC-CCITT initializes all bits to 1
 					computedCRC = 0xFFFF;
 					//calculate CRC-CCITT over packetType, sequenceNum, and dataLength
-					computedCRC = _crc_ccitt_update(computedCRC, packetType);
-					computedCRC = _crc_ccitt_update(computedCRC, sequence);
-					computedCRC = _crc_ccitt_update(computedCRC, dataLength);
+					computedCRC = updateCrcCcitt(computedCRC, packetType);
+					computedCRC = updateCrcCcitt(computedCRC, sequence);
+					computedCRC = updateCrcCcitt(computedCRC, dataLength);
 
 					if (dataLength == 0)
 					{
@@ -329,7 +329,7 @@ printChar(' ');
 			case STATE_DataSection:
 				//keep the data bytes in the circular buffer (don't modify head here)
 				//add to CRC
-				computedCRC = _crc_ccitt_update(computedCRC, receiveByte);
+				computedCRC = updateCrcCcitt(computedCRC, receiveByte);
 				dataCounter--;
 				//if all data has been received, advance to STATE_CrcMsb
 				if (dataCounter == 0)
@@ -367,15 +367,31 @@ printChar(' ');
 						head = head - RX_BUFFER_LENGTH;
 					}
 					//Call the registered exec function, if any
-					logDebug("exec packet %d", packetType);
+					logDebug("Exec packet %d", packetType);
 					if (executor != NULL)
 					{
+						//TODO: start debug code
+						clearScreen();
+						printString("exec pkt ");
+						print_u08(packetType);
+						printChar(' ');
+						print_u08(dataLength);
+						//TODO: end debug code
 						executor(packetType, dataBuffer, dataLength);
 					}
 				}
 				else
 				{
-					logDebug("bad checksum %02X != %02X", computedCRC, receivedCRC);
+					//TODO: start debug code
+					clearScreen();
+					printString("BadCRC comp!=rcv");
+					lowerLine();
+					printHex_u16(computedCRC);
+					printChar(' ');
+					printHex_u16(receivedCRC);
+					//TODO: end debug code
+
+					logDebug("Bad CRC %02X != %02X", computedCRC, receivedCRC);
 					codeTrack(6);
 					//CRC values don't match, packet is either corrupted or we are out of sync with a real packet boundary.
 					//Recover as rapidly as possible by searching for packet starts within the data we already received.
@@ -408,6 +424,11 @@ printChar(' ');
 	}
 }
 
+//! Updates a CRC CCITT to include another byte of data.
+static u16 updateCrcCcitt(const u16 crc, const u08 dataByte)
+{
+	return _crc_ccitt_update(crc, dataByte);
+}
 
 /*
 static void resetPolyBot(const u08 * const data)

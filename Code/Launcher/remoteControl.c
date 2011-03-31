@@ -16,23 +16,21 @@ volatile u08 DataIndex = 0;
 inline u16 parse_u16(const u08 * const data);
 void getVersion();
 ServoRange namedServoRangeByIndex(u08 number);
-bool polyBotRemoteValidator(const u08 packetType, const u08 dataLength);
-void polyBotRemoteExecutor(const u08 packetType, const u08 * const data, const u08 dataLength);
+bool remoteSystemValidator(const u08 packetType, const u08 dataLength);
+void remoteSystemExecutor(const u08 packetType, const u08 * const data, const u08 dataLength);
 
-//! Runs the PolyBotRemote functionality until exited.
-void polyBotRemote()
+//! Runs the Remote System functionality until exited.
+void runRemoteSystem()
 {
-	configPacketProcessor(&polyBotRemoteValidator, &polyBotRemoteExecutor, NUM_CMD - 1);
+	//configure packet processor for Remote System packets
+	configPacketProcessor(&remoteSystemValidator, &remoteSystemExecutor, NUM_CMD - 1);
 	printString_P(PSTR("Remote Control"));
 	lowerLine();
 	printString_P(PSTR("System v" REMOTE_SYSTEM_VERSION));
 
-	//configure packet system for PolyBotRemote packets
-
-
 	//process received packets until exit, everything else is handled by interrupts
 	remoteExited = FALSE;
-	while(remoteExited == FALSE)
+	while (remoteExited == FALSE)
 	{
 		execPacketDriver();
 	}
@@ -84,7 +82,8 @@ ServoRange namedServoRangeByIndex(u08 number)
 	}
 }
 
-bool polyBotRemoteValidator(const u08 packetType, const u08 dataLength)
+//! Validates the packetType and its dataLength.
+bool remoteSystemValidator(const u08 packetType, const u08 dataLength)
 {
 	switch(packetType)
 	{
@@ -134,7 +133,8 @@ bool polyBotRemoteValidator(const u08 packetType, const u08 dataLength)
 	}
 }
 
-void polyBotRemoteExecutor(const u08 packetType, const u08 * const data, const u08 dataLength)
+//! Executes a packet of the specified type.
+void remoteSystemExecutor(const u08 packetType, const u08 * const data, const u08 dataLength)
 {
 	u16 u16temp;
 
@@ -201,25 +201,36 @@ void polyBotRemoteExecutor(const u08 packetType, const u08 * const data, const u
 		case CMD_SERVO:
 			servo(data[0], data[1]);
 			//TODO remove this debug code
-			clearScreen();
+			/*clearScreen();
 			printString("servo ");
 			print_u08(data[0]);
 			printChar(' ');
-			print_u08(data[1]);
+			print_u08(data[1]);*/
 			break;
 
 		case CMD_SERVO2:
 			servo2(data[0], (s08)data[1]);
 			//TODO remove this debug code
-			clearScreen();
+			/*clearScreen();
 			printString("servo2 ");
 			print_u08(data[0]);
 			printChar(' ');
-			print_s08((s08)data[1]);
+			print_s08((s08)data[1]);*/
 			break;
 
 		case CMD_MOTOR:
-			//TODO motor(data[0], (s08)data[1]);
+			if (data[0] == 0)
+			{
+#if USE_MOTOR0 == 1
+				motor0(data[1]);
+#endif
+			}
+			else if (data[0] == 1)
+			{
+#if USE_MOTOR1 == 1
+				motor1(data[1]);
+#endif
+			}
 			break;
 		case CMD_LCD_CURSOR:
 			lcdCursor(data[0], data[1]);
@@ -260,7 +271,7 @@ void polyBotRemoteExecutor(const u08 packetType, const u08 * const data, const u
 			break;*/
 		default:
 			// Command was not recognized
-			lcdCursor(0, 0);
+			clearScreen();
 			printString("CMD Unrecognized");
 			lowerLine();
 			printString("len=");
