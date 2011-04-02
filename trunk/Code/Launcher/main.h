@@ -16,13 +16,10 @@
 #define ADC_MAX 1023
 
 //! The resistance in Ohms of the logic battery's voltage divider resistor connected to positive.
-#define RESISTOR_LOGIC_UPPER 10000
+#define RESISTOR_BATTERY_UPPER 10000
 //! The resistance in Ohms of the logic battery's voltage divider resistor connected to ground.
-#define RESISTOR_LOGIC_LOWER 10000
+#define RESISTOR_BATTERY_LOWER 10000
 //! The resistance in Ohms of the motor battery's voltage divider resistor connected to positive.
-#define RESISTOR_MOTOR_UPPER 10000
-//! The resistance in Ohms of the motor battery's voltage divider resistor connected to ground.
-#define RESISTOR_MOTOR_LOWER 10000
 
 //! The number of Lithium polymer cells in the logic battery pack.
 #define LOGIC_BATTERY_NUM_CELLS 2
@@ -82,10 +79,9 @@ typedef enum
 
 typedef enum
 {
-	ANALOG_MOTOR_BATTERY = 3, //!< The analog input that reads the motor battery, via a voltage divider.
-	ANALOG_LOGIC_BATTERY = 4, //!< The analog input that reads the logic/servo battery, via a voltage divider.
 	ANALOG_WHEEL_ENCODER_INNER = 0, //!< The left wheel encoder (QRB-1114 reflective sensor).
 	ANALOG_WHEEL_ENCODER_WALL = 1, //!< The right wheel encoder (QRB-1114 reflective sensor).
+	ANALOG_BATTERY_VOLTAGE = 2, //!< The analog input that reads the motor battery, via a voltage divider.
 } analog_t;
 
 //! The number of black and white stripes on the encoder wheel
@@ -118,8 +114,7 @@ enum motorSpeeds
 };
 
 //Prototypes
-u16 readLogicBattery();
-u16 readMotorBattery();
+u16 convertToBatteryVoltage(u16 reading);
 void pauseCompetition();
 void resumeCompetition();
 void haltRobot();

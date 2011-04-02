@@ -93,19 +93,19 @@ result in a max position with a pulse width longer than 2.5 ms, so the 20 ms ser
     your servo might be damaged if you try to drive it beyond its supported range.
     You might want to test it manually first, incrementing the position gradually until it stops or buzzes.
     @param servoNum Selects the servo (0 to NUM_SERVOS-1).
-    @param range Specifies a range setting for the servo.
-    Recommended values are specified by the ::ServoRange enumeration.
+    @param range Specifies a range setting for the servo: can be 1 to 255, but
+    recommended values are specified by the ::ServoRange enumeration.
 	@return TRUE if the new range was set, FALSE if the arguments were invalid.
  */
 bool setServoRange(const u08 servoNum, const ServoRange range)
 {
 	//calculate the number of timer ticks for the longest possible servo high-period.
-	u16 maxTicks = CENTER_TICKS + ((range * (255 - CENTER_VALUE)) >> 3);
+	u16 maxTicks = CENTER_TICKS + ((range * (s16)(255 - CENTER_VALUE)) / 8);
 
 	//Validate servoNum parameter so that we don't overwrite other memory locations.
-	//Validate that range parameter is at least 1.
+	//Validate that range parameter is at least 1 and no more than 255.
 	//Validate that range parameter allows all enabled servos to be serviced within SERVO_PERIOD.
-	if (servoNum < NUM_SERVOS && range > 0 && maxTicks < MAX_PERIOD)
+	if (servoNum < NUM_SERVOS && range > 0 && range <= 255 && maxTicks < MAX_PERIOD)
 	{
 		servoRangeMultiplier[servoNum] = range;
 		return TRUE;
@@ -148,7 +148,7 @@ void servo(const u08 servoNum, const u08 position)
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
 		{
 			//Set the highTime for the servo, based on the configured range and commanded position.
-			servoHighTime[servoNum] = CENTER_TICKS + ((servoRangeMultiplier[servoNum] * (position - CENTER_VALUE)) >> 3);
+			servoHighTime[servoNum] = CENTER_TICKS + ((servoRangeMultiplier[servoNum] * (s16)(position - CENTER_VALUE)) / 8);
 
 			//Set the lowTime for the servo to fill the remaining time for this servo period.
 			servoLowTime[servoNum] = MAX_PERIOD - servoHighTime[servoNum];
@@ -172,7 +172,7 @@ void servo2(const u08 servoNum, const s08 position)
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
 		{
 			//Set the highTime for the servo based on the configured range and commanded position.
-			servoHighTime[servoNum] = CENTER_TICKS + ((servoRangeMultiplier[servoNum] * position) >> 3);
+			servoHighTime[servoNum] = CENTER_TICKS + ((servoRangeMultiplier[servoNum] * (s16)position) / 8);
 
 			//Set the lowTime for the servo to fill the remaining time for this servo period.
 			servoLowTime[servoNum] = MAX_PERIOD - servoHighTime[servoNum];
@@ -266,12 +266,9 @@ inline void servoInit()
 	//initialize D flip-flop to all lows
 	writeServoOutput(0);
 
-	//enable timer (set prescaler to /8)
+	//enable timer3 (set prescaler to /8)
 	TCCR3B |= _BV(CS31);
 
 	//enable interrupt for output compare unit 3C
 	TIMSK3 |= _BV(OCIE3C);
-
-	//enable interrupts
-	sei();
 }

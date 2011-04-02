@@ -17,7 +17,7 @@ NUM_SERVOS = 4
 USE_I2C    = 0
 
 # Specify any additional .c source files containing your program code.
-FILES = debug.c launcherPackets.c packetprotocol.c remoteControl.c serial.c
+FILES = debug.c launcherPackets.c packetprotocol.c remoteControl.c rtc.c serial.c
 
 
 # The rest of the makefile is pulled in from MasterMakefile.mk in the XiphosLibrary folder.

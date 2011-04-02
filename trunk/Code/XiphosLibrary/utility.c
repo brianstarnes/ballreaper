@@ -405,7 +405,5 @@ inline void softReset()
 void wdt_init() __attribute__((naked)) __attribute__((section(".init3")));
 void wdt_init()
 {
-	MCUSR = 0;
 	wdt_disable();
-	return;
 }

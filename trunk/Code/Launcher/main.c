@@ -7,11 +7,17 @@
 #include "motors.h"
 #include "packetprotocol.h"
 #include "remoteControl.h"
+#include "rtc.h"
 #include "serial.h"
 #include "servos.h"
 #include "utility.h"
 #include <avr/pgmspace.h>
 
+//Defines
+//! The number of seconds per competition round.
+#define COMPETITION_DURATION_SECS (3 * 60)
+
+//Local variables
 static volatile u16 innerEncoderTicks = 0;
 static volatile u16 totalInnerEncoderTicks = 0;
 static volatile u16 wallEncoderTicks = 0;
@@ -20,13 +26,16 @@ static volatile u08 innerEncoderState;
 static volatile u08 wallEncoderState;
 static volatile u16 innerEncoderReading;
 static volatile u16 wallEncoderReading;
+static volatile u16 batteryReading;
 static volatile s16 error;
 static volatile s16 totalError;
 static volatile bool pause = FALSE;
 
-//local prototypes
+
+//Local prototypes
 static void mainMenu();
 static void runCompetition();
+static void victoryDance();
 static void testMode();
 
 static void printVoltage(u16 milliVolts);
@@ -41,6 +50,7 @@ static void scraperUp();
 static void feederOn();
 static void feederOff();
 
+
 //static void downLink();
 
 //! Initializes XiphosLibrary, pullups, and timers, sends bootup packet, prints version.
@@ -51,7 +61,21 @@ int main()
 	//reset the MCU Status Register
 	MCUSR = 0;
 
+	//Initialize XiphosLibrary
 	initialize();
+
+	rtcInit();
+
+	//Enable ADC interrupt
+	ADCSRA |= _BV(ADIE);
+
+	//set ADC right shifting (for 10-bit ADC reading), and select first ADC pin to read
+	ADMUX = _BV(REFS0) | ANALOG_WHEEL_ENCODER_INNER;
+
+	//enable interrupts
+	sei();
+
+	//Initialize UART and packet system then send boot packet
 	uart0Init();
 	initPacketDriver();
 	sendBootNotification(resetCause);
@@ -63,10 +87,8 @@ int main()
 	//enable pullup resistors for all 8 analog inputs
 	analogPullups(0xFF);
 
-	//enable timer0 (set prescaler to /64)
-	TCCR0B |= _BV(CS02);// | _BV(CS00);
-	//enable interrupt for timer0 output compare unit A
-	TIMSK0 |= _BV(OCIE0A);
+	//Start taking ADC readings
+	ADCSRA |= _BV(ADSC);
 
 	//print firmware version and wait for button press
 	printString_P(PSTR("ballReaper v" LAUNCHER_FIRMWARE_VERSION));
@@ -225,6 +247,7 @@ static void runCompetition()
 	printString_P(PSTR("Press Button"));
 
 	buttonWait();
+	rtcRestart();
 
 	ATOMIC_BLOCK(ATOMIC_FORCEON)
 	{
@@ -379,25 +402,70 @@ static void runCompetition()
 
 		refills++;
 	}
-
-	// Done, declare domination!
     haltRobot();
-	clearScreen();
-	printString_P(PSTR("  Dominated!!"));
-	lowerLine();
-	printString_P(PSTR("ReapedYourBalls"));
-    buttonWait();
 
+	// Wait for end of competition
+	clearScreen();
+	printString_P(PSTR("Remaining"));
+	u08 priorSeconds = 255;
+	while (secCount < COMPETITION_DURATION_SECS)
+	{
+		// only print when the time has changed
+		if (secCount != priorSeconds)
+		{
+			priorSeconds = secCount;
+			lcdCursor(0, 11);
+			u08 secsRemaining = COMPETITION_DURATION_SECS - secCount;
+			// print minutes
+			printChar((secsRemaining / 60) + '0');
+			printChar(':');
+			// print seconds (tens digit)
+			printChar(((secsRemaining % 60) / 10) + '0');
+			// print seconds (ones digit)
+			printChar(((secsRemaining % 60) % 10) + '0');
+			printChar('s');
+		}
+	}
+
+	victoryDance();
 } // End competition
 /************************************************************************************************/
 
+//! Do da Dance!
+void victoryDance()
+{
+	// Done, declare domination!
+	clearScreen();
+	printString_P(PSTR("    PWNED!!!"));
+	lowerLine();
+	printString_P(PSTR("ReapedYourBalls"));
+
+	// Press button to skip
+	for (u08 i = 0; i < 4 && !getButton1(); i++)
+	{
+		pidDrive(FAST_SPEED_WALL_WHEEL, FAST_SPEED_INNER_WHEEL);
+		scraperDown();
+		delayMs(500);
+		if (getButton1())
+		{
+			break;
+		}
+		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
+		scraperUp();
+		delayMs(700);
+	}
+	haltRobot();
+}
+
 void pauseCompetition()
 {
+	rtcPause();
 	pause = TRUE;
 }
 
 void resumeCompetition()
 {
+	rtcResume();
 	pause = FALSE;
 }
 
@@ -489,8 +557,7 @@ static void feederOff()
 
 //! Test Mode pages.
 enum {
-	TEST_BatteryVoltages,
-	TEST_BatteryReadings,
+	TEST_BatteryVoltage,
 	TEST_Switches,
 	TEST_EncoderTicks,
 	TEST_EncoderReadings,
@@ -516,9 +583,8 @@ static void testMode()
 		//print the static top line
 		switch (page)
 		{
-			case TEST_BatteryVoltages:
-			case TEST_BatteryReadings:
-				printString_P(PSTR(" Logic   Motor"));
+			case TEST_BatteryVoltage:
+				printString_P(PSTR("Voltage, Reading"));
 				break;
 			case TEST_Switches:
 				printString_P(PSTR("SW:BL BR SB SF F"));
@@ -543,17 +609,11 @@ static void testMode()
 		{
 			switch (page)
 			{
-				case TEST_BatteryVoltages:
+				case TEST_BatteryVoltage:
 					lowerLine();
-					printVoltage(readLogicBattery());
-					printChar(' ');
-					printVoltage(readMotorBattery());
-					break;
-				case TEST_BatteryReadings:
-					lowerLine();
-					print_u16(analog10(ANALOG_LOGIC_BATTERY));
-					lcdCursor(1, 8);
-					print_u16(analog10(ANALOG_MOTOR_BATTERY));
+					printVoltage(convertToBatteryVoltage(batteryReading));
+					lcdCursor(0, 9);
+					print_u16(batteryReading);
 					break;
 				case TEST_Switches:
 					lcdCursor(1, 3);
@@ -674,61 +734,86 @@ static void printVoltage(u16 milliVolts)
 	printChar('V');
 }
 
-//! Reads the voltage (in milliVolts) of the battery that powers the logic and servos, via a voltage divider.
-u16 readLogicBattery()
+//! Converts the battery voltage divider reading to a voltage (in milliVolts).
+u16 convertToBatteryVoltage(u16 reading)
 {
-	u16 readingCounts = analog10(ANALOG_LOGIC_BATTERY);
 	//multiply by 1000 to convert volts to milliVolts, divide by ADC resolution to get a voltage.
-	u32 readingMillivolts = (u32)readingCounts * AREF_VOLTAGE * 1000 / NUM_ADC10_VALUES;
-	u16 batteryMillivolts = (u16)(readingMillivolts * (RESISTOR_LOGIC_LOWER + RESISTOR_LOGIC_UPPER) / RESISTOR_LOGIC_LOWER);
+	u32 readingMillivolts = (u32)reading * AREF_VOLTAGE * 1000 / NUM_ADC10_VALUES;
+	u16 batteryMillivolts = (u16)(readingMillivolts * (RESISTOR_BATTERY_LOWER + RESISTOR_BATTERY_UPPER) / RESISTOR_BATTERY_LOWER);
 	return batteryMillivolts;
 }
 
-//! Reads the voltage (in milliVolts) of the battery that powers the drive and launcher motors, via a voltage divider.
-u16 readMotorBattery()
+ISR(ADC_vect)
 {
-	u16 readingCounts = analog10(ANALOG_MOTOR_BATTERY);
-	//multiply by 1000 to convert volts to milliVolts, divide by ADC resolution to get a voltage.
-	u32 readingMillivolts = (u32)readingCounts * AREF_VOLTAGE * 1000 / NUM_ADC10_VALUES;
-	u16 batteryMillivolts = (u16)(readingMillivolts * (RESISTOR_MOTOR_LOWER + RESISTOR_MOTOR_UPPER) / RESISTOR_MOTOR_LOWER);
-	return batteryMillivolts;
-}
+	// lower 8 bits of result must be read first
+	const u08 lowByte = ADCL;
+	// combine the high and low byte to get a 16-bit result.
+	u16 reading = ((u16)ADCH << 8) | lowByte;
 
-//! Interrupt service routine for counting wheel encoder ticks.
-ISR(TIMER0_COMPA_vect)
-{
-	//read the wheel encoders (QRB-1114 reflective sensors)
-	innerEncoderReading = analog10(ANALOG_WHEEL_ENCODER_INNER);
-	wallEncoderReading = analog10(ANALOG_WHEEL_ENCODER_WALL);
+	bool encoderUpdated = FALSE;
 
-	if (innerEncoderReading >= ENCODER_THRESHOLD_INNER_HIGH && innerEncoderState != 1)
+	// determine which input was read
+	switch (ADMUX & 0x3F)
 	{
-		innerEncoderState = 1;
-		innerEncoderTicks++;
-		totalInnerEncoderTicks++;
-	}
-	else if (innerEncoderReading <= ENCODER_THRESHOLD_INNER_LOW && innerEncoderState != 0)
-	{
-		innerEncoderState = 0;
-		innerEncoderTicks++;
-		totalInnerEncoderTicks++;
-	}
-
-	if (wallEncoderReading >= ENCODER_THRESHOLD_WALL_HIGH && wallEncoderState != 1)
-	{
-		wallEncoderState = 1;
-		wallEncoderTicks++;
-		totalWallEncoderTicks++;
-	}
-	else if (wallEncoderReading <= ENCODER_THRESHOLD_WALL_LOW && wallEncoderState != 0)
-	{
-		wallEncoderState = 0;
-		wallEncoderTicks++;
-		totalWallEncoderTicks++;
+		case ANALOG_WHEEL_ENCODER_INNER:
+			innerEncoderReading = reading;
+			encoderUpdated = TRUE;
+			// set ADC right shifting (for 10-bit ADC reading), and select next ADC pin to read
+			ADMUX = _BV(REFS0) | ANALOG_WHEEL_ENCODER_WALL;
+			break;
+		case ANALOG_WHEEL_ENCODER_WALL:
+			wallEncoderReading = reading;
+			encoderUpdated = TRUE;
+			// set ADC right shifting (for 10-bit ADC reading), and select next ADC pin to read
+			ADMUX = _BV(REFS0) | ANALOG_BATTERY_VOLTAGE;
+			break;
+		case ANALOG_BATTERY_VOLTAGE:
+			batteryReading = reading;
+			// set ADC right shifting (for 10-bit ADC reading), and select next ADC pin to read
+			ADMUX = _BV(REFS0) | ANALOG_WHEEL_ENCODER_INNER;
+			break;
+		default:
+			// shouldn't ever reach this point. Just reset to a valid analog input.
+			// set ADC right shifting (for 10-bit ADC reading), and select next ADC pin to read
+			ADMUX = _BV(REFS0) | ANALOG_WHEEL_ENCODER_INNER;
+			break;
 	}
 
-	error = (totalInnerEncoderTicks - totalWallEncoderTicks);
-	totalError += error;
+	// Start the next reading
+	ADCSRA |= _BV(ADSC);
+
+	// for encoder readings, run the tick counting logic
+	if (encoderUpdated)
+	{
+		if (innerEncoderReading >= ENCODER_THRESHOLD_INNER_HIGH && innerEncoderState != 1)
+		{
+			innerEncoderState = 1;
+			innerEncoderTicks++;
+			totalInnerEncoderTicks++;
+		}
+		else if (innerEncoderReading <= ENCODER_THRESHOLD_INNER_LOW && innerEncoderState != 0)
+		{
+			innerEncoderState = 0;
+			innerEncoderTicks++;
+			totalInnerEncoderTicks++;
+		}
+
+		if (wallEncoderReading >= ENCODER_THRESHOLD_WALL_HIGH && wallEncoderState != 1)
+		{
+			wallEncoderState = 1;
+			wallEncoderTicks++;
+			totalWallEncoderTicks++;
+		}
+		else if (wallEncoderReading <= ENCODER_THRESHOLD_WALL_LOW && wallEncoderState != 0)
+		{
+			wallEncoderState = 0;
+			wallEncoderTicks++;
+			totalWallEncoderTicks++;
+		}
+
+		error = (totalInnerEncoderTicks - totalWallEncoderTicks);
+		totalError += error;
+	}
 }
 
 void haltRobot()

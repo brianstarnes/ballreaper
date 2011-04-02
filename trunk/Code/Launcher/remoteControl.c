@@ -192,6 +192,16 @@ void remoteSystemExecutor(const u08 packetType, const u08 * const data, const u0
 			break;
 		case CMD_SERVO_OFF:
 			servoOff(data[0]);
+			//TODO remove this debug code
+			if (data[0] == 0)
+			{
+				upperLine();
+			}
+			else if (data[0] == 1)
+			{
+				lowerLine();
+			}
+			printString("Off ");
 			break;
 		//case CMD_PLAY_SOUND:
 		//	playSoundNum(parse_u16(data));
@@ -201,21 +211,30 @@ void remoteSystemExecutor(const u08 packetType, const u08 * const data, const u0
 		case CMD_SERVO:
 			servo(data[0], data[1]);
 			//TODO remove this debug code
-			/*clearScreen();
-			printString("servo ");
-			print_u08(data[0]);
+			if (data[0] == 0)
+			{
+				upperLine();
+			}
+			else if (data[0] == 1)
+			{
+				lowerLine();
+			}
+			print_u08(data[1]);
 			printChar(' ');
-			print_u08(data[1]);*/
 			break;
 
 		case CMD_SERVO2:
 			servo2(data[0], (s08)data[1]);
 			//TODO remove this debug code
-			/*clearScreen();
-			printString("servo2 ");
-			print_u08(data[0]);
-			printChar(' ');
-			print_s08((s08)data[1]);*/
+			if (data[0] == 0)
+			{
+				upperLine();
+			}
+			else if (data[0] == 1)
+			{
+				lowerLine();
+			}
+			print_s08((s08)data[1]);
 			break;
 
 		case CMD_MOTOR:
