@@ -372,10 +372,10 @@ printChar(' ');
 					{
 						//TODO: start debug code
 						clearScreen();
-						printString("exec pkt ");
+						/*printString("exec pkt ");
 						print_u08(packetType);
 						printChar(' ');
-						print_u08(dataLength);
+						print_u08(dataLength);*/
 						//TODO: end debug code
 						executor(packetType, dataBuffer, dataLength);
 					}
