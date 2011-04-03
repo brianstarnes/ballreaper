@@ -17,8 +17,17 @@ NUM_SERVOS = 4
 USE_I2C    = 0
 
 # Specify any additional .c source files containing your program code.
-FILES = debug.c launcherPackets.c packetprotocol.c remoteControl.c rtc.c serial.c
-
+FILES = \
+  compRight.c \
+  compRight2.c \
+  debug.c \
+  launcherPackets.c \
+  packetprotocol.c \
+  remoteControl.c \
+  rtc.c \
+  serial.c \
+  testmode.c \
+  util.c
 
 # The rest of the makefile is pulled in from MasterMakefile.mk in the XiphosLibrary folder.
 # This includes the PORT and ISP variables defining the programmer to be used, the MCU variable defining the target microcontroller model,

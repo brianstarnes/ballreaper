@@ -35,6 +35,9 @@
 //! The voltage (in milliVolts) at which to turn off servos and anything else possible on the logic battery.
 #define LOGIC_BATTERY_VOLTAGE_CUTOFF 3000 * LOGIC_BATTERY_NUM_CELLS
 
+//! The number of seconds per competition round.
+#define COMPETITION_DURATION_SECS (3 * 60)
+
 //! The drive motor that is always on the inside of the course.
 #define innerMotor(speedAndDirection) motor0(127 + speedAndDirection)
 //! The drive motor that always runs along the wall.
@@ -45,6 +48,7 @@
 #define FRONT_HIT           !digitalInput(SWITCH_FRONT_WALL)
 #define BACK_RIGHT_HIT      !digitalInput(SWITCH_BACK_WALL_RIGHT)
 #define BACK_LEFT_HIT       !digitalInput(SWITCH_BACK_WALL_LEFT)
+#define PIVOT_HIT           !digitalInput(SWITCH_PIVOT)
 
 enum servos
 {
@@ -60,7 +64,7 @@ enum servoPositions
 	SCRAPER_MOSTLY_DOWN = 10, //!< The initial position to lower the scraper arm to to avoid whacking the trough.
 	SCRAPER_UP = 134, //!< The raised position for the scraper arm.
 	FEEDER_STOPPED = 128,
-	FEEDER_RUNNING = 140,
+	FEEDER_RUNNING = 110,
 	LAUNCHER_SPEED_STOPPED = 128, //!< The center servo setting that the Sabertooth interprets as stopped.
 	LAUNCHER_SPEED_NEAR = 188, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
 	LAUNCHER_SPEED_FAR = 228,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
@@ -73,8 +77,9 @@ typedef enum
 	SWITCH_SIDE_WALL_REAR = 2,
 	SWITCH_SIDE_WALL_FRONT = 3,
 	SWITCH_FRONT_WALL = 4,
-	SWITCH_SCROLL_UP = 8,
-	SWITCH_SCROLL_DOWN = 9
+	SWITCH_PIVOT = 5,
+	SWITCH_SCROLL = 8,
+	SWITCH_ROBOT_ID = 9
 } switch_t;
 
 typedef enum
@@ -105,18 +110,29 @@ typedef enum
 //wall motor is stronger/faster
 enum motorSpeeds
 {
-	FAST_SPEED_INNER_WHEEL = 35,
-	FAST_SPEED_WALL_WHEEL = 35,
-	SLOW_SPEED_INNER_WHEEL = 29,
-	SLOW_SPEED_WALL_WHEEL = 29,
+	FAST_SPEED_INNER_WHEEL = 29,
+	FAST_SPEED_WALL_WHEEL = 29,
+	SLOW_SPEED_INNER_WHEEL = 24,
+	SLOW_SPEED_WALL_WHEEL = 24,
 	TURN_SPEED_INNER_WHEEL = 50,
 	TURN_SPEED_WALL_WHEEL = 50
 };
 
 //Prototypes
-u16 convertToBatteryVoltage(u16 reading);
 void pauseCompetition();
 void resumeCompetition();
-void haltRobot();
+
+extern volatile u16 innerEncoderTicks;
+extern volatile u16 totalInnerEncoderTicks;
+extern volatile u16 wallEncoderTicks;
+extern volatile u16 totalWallEncoderTicks;
+extern volatile u08 innerEncoderState;
+extern volatile u08 wallEncoderState;
+extern volatile u16 innerEncoderReading;
+extern volatile u16 wallEncoderReading;
+extern volatile u16 batteryReading;
+extern volatile s16 error;
+extern volatile s16 totalError;
+extern volatile bool pause;
 
 #endif
