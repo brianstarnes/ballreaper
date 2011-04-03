@@ -78,16 +78,30 @@ void testModeExec()
 					print_u16(batteryReading);
 					break;
 				case TEST_Switches:
-					lcdCursor(1, 3);
-					printChar(digitalInput(SWITCH_BACK_WALL_LEFT) + '0');
-					lcdCursor(1, 6);
-					printChar(digitalInput(SWITCH_BACK_WALL_RIGHT) + '0');
-					lcdCursor(1, 9);
-					printChar(digitalInput(SWITCH_SIDE_WALL_REAR) + '0');
-					lcdCursor(1, 12);
-					printChar(digitalInput(SWITCH_SIDE_WALL_FRONT) + '0');
-					lcdCursor(1, 15);
-					printChar(digitalInput(SWITCH_FRONT_WALL) + '0');
+					if (LEFT_ROBOT_ID)
+					{
+						lcdCursor(1, 3);
+						printChar(digitalInput(LSWITCH_BACK) + '0');
+						lcdCursor(1, 6);
+						printChar(digitalInput(LSWITCH_SIDE_WALL_REAR) + '0');
+						lcdCursor(1, 9);
+						printChar(digitalInput(LSWITCH_SIDE_WALL_FRONT) + '0');
+						lcdCursor(1, 12);
+						printChar(digitalInput(LSWITCH_FRONT) + '0');
+					}
+					else
+					{
+						lcdCursor(1, 3);
+						printChar(digitalInput(SWITCH_BACK_WALL_LEFT) + '0');
+						lcdCursor(1, 6);
+						printChar(digitalInput(SWITCH_BACK_WALL_RIGHT) + '0');
+						lcdCursor(1, 9);
+						printChar(digitalInput(SWITCH_SIDE_WALL_REAR) + '0');
+						lcdCursor(1, 12);
+						printChar(digitalInput(SWITCH_SIDE_WALL_FRONT) + '0');
+						lcdCursor(1, 15);
+						printChar(digitalInput(SWITCH_FRONT_WALL) + '0');
+					}
 					break;
 				case TEST_EncoderTicks:
 					lowerLine();
