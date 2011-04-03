@@ -16,6 +16,12 @@ void feederOff();
 void haltRobot();
 void resetEncoders();
 void calibrate(int ticksPerSec, s08* wallMotorSpeed, s08* innerMotorSpeed);
+void compCollectFwd();
+void compCollectBack();
+void compDone();
+void hugWallForwards();
+void hugWallBackwards();
+void victoryDance();
 u16 convertToBatteryVoltage(u16 reading);
 
 #endif

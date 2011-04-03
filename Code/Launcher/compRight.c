@@ -13,15 +13,8 @@
 #include "util.h"
 #include "utility.h"
 
-static void hugWallForwards();
-static void hugWallBackwards();
 static void compStart();
 static void compTurnLeft();
-static void compCollectFwd();
-static void compCollectBack();
-static void compDone();
-static void victoryDance();
-
 
 enum {
 	COMP_DRIVE_FORWARD,
@@ -33,7 +26,6 @@ enum {
 
 static int compState;
 static u08 refills = 0;
-static int i, j;
 
 void compRightInit()
 {
@@ -41,6 +33,7 @@ void compRightInit()
 
 	configPacketProcessor(&validateLauncherPacket, &execLauncherPacket, LAST_UplinkPacketType - 1);
 
+	resetEncoders();
 	compStart();
 	compState = COMP_DRIVE_FORWARD;
 }
@@ -109,81 +102,8 @@ void compRightExec()
 	}
 } // End competition
 
-static void hugWallForwards()
-{
-	if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
-	{
-		//lost the wall
-		if (j < 5)
-			j++;
-		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
-	}
-	else if (!REAR_SIDE_WALL_HIT)
-	{
-		i++;
-		if (j > 0)
-			j--;
-		if (i > 5)
-			i = 5;
-		pidDrive(SLOW_SPEED_WALL_WHEEL + i, SLOW_SPEED_INNER_WHEEL);
-	}
-	else if (!FRONT_SIDE_WALL_HIT)
-	{
-		j++;
-		if (i > 0)
-			i--;
-		if (j > 5)
-			j = 5;
-		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
-	}
-	else
-	{
-		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
-		i = j = 0;
-	}
-}
-
-static void hugWallBackwards()
-{
-	if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
-	{
-		//lost the wall
-		i++;
-		if (j > 0)
-			j--;
-		if (i > 5)
-			i = 5;
-		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - i);
-	}
-	else if (!REAR_SIDE_WALL_HIT)
-	{
-		i++;
-		if (j > 0)
-			j--;
-		if (i > 5)
-			i = 5;
-		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - i);
-	}
-	else if (!FRONT_SIDE_WALL_HIT)
-	{
-		j++;
-		if (i > 0)
-			i--;
-		if (j > 5)
-			j = 5;
-		pidDrive(-SLOW_SPEED_WALL_WHEEL - j, -SLOW_SPEED_INNER_WHEEL);
-	}
-	else
-	{
-		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
-		i = j = 0;
-	}
-}
-
 static void compStart()
 {
-	resetEncoders();
-
 	clearScreen();
 	lowerLine();
 	printString_P(PSTR("Drive forward"));
@@ -200,84 +120,3 @@ static void compTurnLeft()
     turnLeft();
 }
 
-static void compCollectFwd()
-{
-	i = j = 0;
-
-	stop();
-	delayMs(500);
-	scraperDown();
-
-	// Start driving forward to pick balls up
-	clearScreen();
-    printString_P(PSTR("Drive forward"));
-}
-
-static void compCollectBack()
-{
-	i = j = 0;
-
-	stop();
-	delayMs(500);
-	scraperUp();
-
-	// Start driving backwards to get a refill
-	clearScreen();
-    printString_P(PSTR("Drive backwards"));
-}
-
-static void compDone()
-{
-    haltRobot();
-
-	// Wait for end of competition
-	clearScreen();
-	printString_P(PSTR("Remaining"));
-	u08 priorSeconds = 255;
-	while (secCount < COMPETITION_DURATION_SECS)
-	{
-		// only print when the time has changed
-		if (secCount != priorSeconds)
-		{
-			priorSeconds = secCount;
-			lcdCursor(0, 11);
-			u08 secsRemaining = COMPETITION_DURATION_SECS - secCount;
-			// print minutes
-			printChar((secsRemaining / 60) + '0');
-			printChar(':');
-			// print seconds (tens digit)
-			printChar(((secsRemaining % 60) / 10) + '0');
-			// print seconds (ones digit)
-			printChar(((secsRemaining % 60) % 10) + '0');
-			printChar('s');
-		}
-	}
-
-	victoryDance();
-}
-
-//! Do da Dance!
-static void victoryDance()
-{
-	// Done, declare domination!
-	clearScreen();
-	printString_P(PSTR("    PWNED!!!"));
-	lowerLine();
-	printString_P(PSTR("ReapedYourBalls"));
-
-	// Press button to skip
-	for (u08 i = 0; i < 4 && !getButton1(); i++)
-	{
-		pidDrive(FAST_SPEED_WALL_WHEEL, FAST_SPEED_INNER_WHEEL);
-		scraperDown();
-		delayMs(500);
-		if (getButton1())
-		{
-			break;
-		}
-		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
-		scraperUp();
-		delayMs(700);
-	}
-	haltRobot();
-}
