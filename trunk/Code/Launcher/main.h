@@ -43,12 +43,22 @@
 //! The drive motor that always runs along the wall.
 #define wallMotor(speedAndDirection) motor1(127 + speedAndDirection)
 
+// Right robot switches
 #define REAR_SIDE_WALL_HIT  !digitalInput(SWITCH_SIDE_WALL_REAR)
 #define FRONT_SIDE_WALL_HIT !digitalInput(SWITCH_SIDE_WALL_FRONT)
 #define FRONT_HIT           !digitalInput(SWITCH_FRONT_WALL)
 #define BACK_RIGHT_HIT      !digitalInput(SWITCH_BACK_WALL_RIGHT)
 #define BACK_LEFT_HIT       !digitalInput(SWITCH_BACK_WALL_LEFT)
 #define PIVOT_HIT           !digitalInput(SWITCH_PIVOT)
+
+// Left robot switches
+#define LREAR_SIDE_WALL_HIT  !digitalInput(LSWITCH_SIDE_WALL_REAR)
+#define LFRONT_SIDE_WALL_HIT !digitalInput(LSWITCH_SIDE_WALL_FRONT)
+#define LFRONT_HIT           !digitalInput(LSWITCH_FRONT)
+#define LBACK_HIT            !digitalInput(LSWITCH_BACK)
+
+// Robot ID input
+#define LEFT_ROBOT_ID        !digitalInput(SWITCH_ROBOT_ID)
 
 enum servos
 {
@@ -60,33 +70,41 @@ enum servos
 
 enum servoPositions
 {
-	SCRAPER_DOWN = 4, //!< The final position to lower the scraper arm to to collect balls.
-	SCRAPER_MOSTLY_DOWN = 10, //!< The initial position to lower the scraper arm to to avoid whacking the trough.
-	SCRAPER_UP = 134, //!< The raised position for the scraper arm.
-	FEEDER_STOPPED = 128,
-	FEEDER_RUNNING = 110,
+	SCRAPER_DOWN           = 4, //!< The final position to lower the scraper arm to to collect balls.
+	SCRAPER_MOSTLY_DOWN    = 10, //!< The initial position to lower the scraper arm to to avoid whacking the trough.
+	SCRAPER_UP             = 134, //!< The raised position for the scraper arm.
+	FEEDER_STOPPED         = 128,
+	FEEDER_RUNNING         = 110,
 	LAUNCHER_SPEED_STOPPED = 128, //!< The center servo setting that the Sabertooth interprets as stopped.
-	LAUNCHER_SPEED_NEAR = 188, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
-	LAUNCHER_SPEED_FAR = 228,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
+	LAUNCHER_SPEED_NEAR    = 188, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
+	LAUNCHER_SPEED_FAR     = 228,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
 };
 
 typedef enum
 {
-	SWITCH_BACK_WALL_LEFT = 0,
+	SWITCH_BACK_WALL_LEFT  = 0,
 	SWITCH_BACK_WALL_RIGHT = 1,
-	SWITCH_SIDE_WALL_REAR = 2,
+	SWITCH_SIDE_WALL_REAR  = 2,
 	SWITCH_SIDE_WALL_FRONT = 3,
-	SWITCH_FRONT_WALL = 4,
-	SWITCH_PIVOT = 5,
-	SWITCH_SCROLL = 8,
-	SWITCH_ROBOT_ID = 9
-} switch_t;
+	SWITCH_FRONT_WALL      = 4,
+	SWITCH_PIVOT           = 5,
+	SWITCH_SCROLL          = 8,
+	SWITCH_ROBOT_ID        = 9
+} rightSwitch_t;
+
+typedef enum
+{
+	LSWITCH_BACK            = 0,
+	LSWITCH_SIDE_WALL_REAR  = 1,
+	LSWITCH_SIDE_WALL_FRONT = 2,
+	LSWITCH_FRONT           = 3,
+} leftSwitch_t;
 
 typedef enum
 {
 	ANALOG_WHEEL_ENCODER_INNER = 0, //!< The left wheel encoder (QRB-1114 reflective sensor).
-	ANALOG_WHEEL_ENCODER_WALL = 1, //!< The right wheel encoder (QRB-1114 reflective sensor).
-	ANALOG_BATTERY_VOLTAGE = 2, //!< The analog input that reads the motor battery, via a voltage divider.
+	ANALOG_WHEEL_ENCODER_WALL  = 1, //!< The right wheel encoder (QRB-1114 reflective sensor).
+	ANALOG_BATTERY_VOLTAGE     = 2, //!< The analog input that reads the motor battery, via a voltage divider.
 } analog_t;
 
 //! The number of black and white stripes on the encoder wheel
@@ -95,15 +113,15 @@ typedef enum
 //! Thresholds used for wheel encoder hysteresis.
 enum encoderThresholds
 {
-	ENCODER_THRESHOLD_INNER_LOW = 100,
+	ENCODER_THRESHOLD_INNER_LOW  = 100,
 	ENCODER_THRESHOLD_INNER_HIGH = 250,
-	ENCODER_THRESHOLD_WALL_LOW = 100,
-	ENCODER_THRESHOLD_WALL_HIGH = 250
+	ENCODER_THRESHOLD_WALL_LOW   = 100,
+	ENCODER_THRESHOLD_WALL_HIGH  = 250
 };
 
 typedef enum
 {
-	MOTOR_WALL = 0, //!< The drive motor that always runs along the wall.
+	MOTOR_WALL  = 0, //!< The drive motor that always runs along the wall.
 	MOTOR_INNER = 1 //!< The drive motor that is always on the inside of the course.
 } motor_t;
 
@@ -111,11 +129,11 @@ typedef enum
 enum motorSpeeds
 {
 	FAST_SPEED_INNER_WHEEL = 29,
-	FAST_SPEED_WALL_WHEEL = 29,
+	FAST_SPEED_WALL_WHEEL  = 29,
 	SLOW_SPEED_INNER_WHEEL = 24,
-	SLOW_SPEED_WALL_WHEEL = 24,
+	SLOW_SPEED_WALL_WHEEL  = 24,
 	TURN_SPEED_INNER_WHEEL = 50,
-	TURN_SPEED_WALL_WHEEL = 50
+	TURN_SPEED_WALL_WHEEL  = 50
 };
 
 //Prototypes

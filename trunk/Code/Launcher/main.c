@@ -1,6 +1,6 @@
 #include "ADC.h"
+#include "compLeft.h"
 #include "compRight.h"
-#include "compRight2.h"
 #include "debug.h"
 #include "launcherPackets.h"
 #include "LCD.h"
@@ -145,8 +145,16 @@ static void mainMenu()
 	switch (choice)
 	{
 		case Option_RunCompetition:
-			pProgInit = compRightInit;
-			pProgExec = compRightExec;
+			if (LEFT_ROBOT_ID)
+			{
+				pProgInit = compLeftInit;
+				pProgExec = compLeftExec;
+			}
+			else
+			{
+				pProgInit = compRightInit;
+				pProgExec = compRightExec;
+			}
 			break;
 		case Option_TestMode:
 			pProgInit = testModeInit;

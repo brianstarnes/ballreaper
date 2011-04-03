@@ -19,7 +19,7 @@ USE_I2C    = 0
 # Specify any additional .c source files containing your program code.
 FILES = \
   compRight.c \
-  compRight2.c \
+  compLeft.c \
   debug.c \
   launcherPackets.c \
   packetprotocol.c \
