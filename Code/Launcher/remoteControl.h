@@ -84,6 +84,7 @@ enum Responses
 extern volatile bool remoteExited;
 
 //Prototypes
-void runRemoteSystem();
+void remoteSystemInit();
+void remoteSystemExec();
 
 #endif

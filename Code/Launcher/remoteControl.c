@@ -19,8 +19,13 @@ ServoRange namedServoRangeByIndex(u08 number);
 bool remoteSystemValidator(const u08 packetType, const u08 dataLength);
 void remoteSystemExecutor(const u08 packetType, const u08 * const data, const u08 dataLength);
 
+void remoteSystemInit()
+{
+
+}
+
 //! Runs the Remote System functionality until exited.
-void runRemoteSystem()
+void remoteSystemExec()
 {
 	//configure packet processor for Remote System packets
 	configPacketProcessor(&remoteSystemValidator, &remoteSystemExecutor, NUM_CMD - 1);
