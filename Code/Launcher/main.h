@@ -70,14 +70,17 @@ enum servos
 
 enum servoPositions
 {
-	SCRAPER_DOWN           = 4, //!< The final position to lower the scraper arm to to collect balls.
-	SCRAPER_MOSTLY_DOWN    = 10, //!< The initial position to lower the scraper arm to to avoid whacking the trough.
-	SCRAPER_UP             = 134, //!< The raised position for the scraper arm.
+	RSCRAPER_DOWN          = 6, //!< The final position to lower the right scraper arm to to collect balls.
+	RSCRAPER_MOSTLY_DOWN   = 10, //!< The initial position to lower the right scraper arm to to avoid whacking the trough.
+	RSCRAPER_UP            = 134, //!< The raised position for the right scraper arm.
+	LSCRAPER_DOWN          = 128, //!< The final position to lower the left scraper arm to to collect balls.
+	LSCRAPER_MOSTLY_DOWN   = 127, //!< The initial position to lower the left scraper arm to to avoid whacking the trough.
+	LSCRAPER_UP            = 6, //!< The raised position for the left scraper arm.
 	FEEDER_STOPPED         = 128,
-	FEEDER_RUNNING         = 110,
+	FEEDER_RUNNING         = 0,
 	LAUNCHER_SPEED_STOPPED = 128, //!< The center servo setting that the Sabertooth interprets as stopped.
-	LAUNCHER_SPEED_NEAR    = 188, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
-	LAUNCHER_SPEED_FAR     = 228,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
+	LAUNCHER_SPEED_NEAR    = 88, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
+	LAUNCHER_SPEED_FAR     = 58,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
 };
 
 typedef enum
@@ -128,12 +131,12 @@ typedef enum
 //wall motor is stronger/faster
 enum motorSpeeds
 {
-	FAST_SPEED_INNER_WHEEL = 29,
-	FAST_SPEED_WALL_WHEEL  = 29,
-	SLOW_SPEED_INNER_WHEEL = 24,
-	SLOW_SPEED_WALL_WHEEL  = 24,
-	TURN_SPEED_INNER_WHEEL = 50,
-	TURN_SPEED_WALL_WHEEL  = 50
+	FAST_SPEED_INNER_WHEEL = 33,
+	FAST_SPEED_WALL_WHEEL  = 33,
+	SLOW_SPEED_INNER_WHEEL = 26,
+	SLOW_SPEED_WALL_WHEEL  = 26,
+	TURN_SPEED_INNER_WHEEL = 45,
+	TURN_SPEED_WALL_WHEEL  = 45
 };
 
 //Prototypes
