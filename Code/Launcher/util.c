@@ -87,35 +87,39 @@ void hugWallForwards()
 {
 	if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
 	{
-		//lost the wall
-		if (j < 10)
+		//lost the wall, turn back into the wall
+		if (j < 5)
 			j++;
 		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
 	}
-	else if (!PIVOT_HIT)
+	else if (!PIVOT_HIT && !LEFT_ROBOT_ID)
 	{
 		turnLeft();
 	}
 	else if (!FRONT_SIDE_WALL_HIT)
 	{
-		i++;
-		if (j > 0)
-			j--;
-		if (i > 10)
-			i = 10;
-		pidDrive(SLOW_SPEED_WALL_WHEEL + i, SLOW_SPEED_INNER_WHEEL);
-	}
-	else if (!REAR_SIDE_WALL_HIT)
-	{
+		//Turn into the wall
 		j++;
 		if (i > 0)
 			i--;
-		if (j > 10)
-			j = 10;
+		if (j > 5)
+			j = 5;
 		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
+	}
+	else if (!REAR_SIDE_WALL_HIT)
+	{
+		//Turn away from the wall
+		i++;
+		if (j > 0)
+			j--;
+		if (i > 5)
+			i = 5;
+		pidDrive(SLOW_SPEED_WALL_WHEEL + i, SLOW_SPEED_INNER_WHEEL);
+
 	}
 	else
 	{
+		//Drive straight
 		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
 		i = j = 0;
 	}
@@ -129,30 +133,33 @@ void hugWallBackwards()
 		i++;
 		if (j > 0)
 			j--;
-		if (i > 10)
-			i = 10;
+		if (i > 5)
+			i = 5;
 		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - i);
 	}
 	else if (!REAR_SIDE_WALL_HIT)
 	{
+		//Turn into the wall
 		i++;
 		if (j > 0)
 			j--;
-		if (i > 10)
-			i = 10;
+		if (i > 5)
+			i = 5;
 		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - i);
 	}
 	else if (!FRONT_SIDE_WALL_HIT)
 	{
+		//Turn away from the wall
 		j++;
 		if (i > 0)
 			i--;
-		if (j > 10)
-			j = 10;
+		if (j > 5)
+			j = 5;
 		pidDrive(-SLOW_SPEED_WALL_WHEEL - j, -SLOW_SPEED_INNER_WHEEL);
 	}
 	else
 	{
+		//Drive straight
 		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
 		i = j = 0;
 	}
