@@ -74,6 +74,9 @@ int main()
 	//Start taking ADC readings
 	ADCSRA |= _BV(ADSC);
 
+	//Make sure launcher is off
+	launcherSpeed(128);
+
 	mainMenu();
 }
 

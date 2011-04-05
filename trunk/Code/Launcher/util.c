@@ -59,12 +59,15 @@ void compCollectFwd()
 	i = j = 0;
 
 	stop();
-	delayMs(500);
 	scraperDown();
+	feederOn();
+	launcherSpeed(LAUNCHER_SPEED_FAR);
+	delayMs(2000);
 
-	// Start driving forward to pick balls up
 	clearScreen();
     printString_P(PSTR("Drive forward"));
+
+	resetEncoders();
 }
 
 void compCollectBack()
@@ -85,26 +88,30 @@ void hugWallForwards()
 	if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
 	{
 		//lost the wall
-		if (j < 5)
+		if (j < 10)
 			j++;
 		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
 	}
-	else if (!REAR_SIDE_WALL_HIT)
+	else if (!PIVOT_HIT)
+	{
+		turnLeft();
+	}
+	else if (!FRONT_SIDE_WALL_HIT)
 	{
 		i++;
 		if (j > 0)
 			j--;
-		if (i > 5)
-			i = 5;
+		if (i > 10)
+			i = 10;
 		pidDrive(SLOW_SPEED_WALL_WHEEL + i, SLOW_SPEED_INNER_WHEEL);
 	}
-	else if (!FRONT_SIDE_WALL_HIT)
+	else if (!REAR_SIDE_WALL_HIT)
 	{
 		j++;
 		if (i > 0)
 			i--;
-		if (j > 5)
-			j = 5;
+		if (j > 10)
+			j = 10;
 		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
 	}
 	else
@@ -122,8 +129,8 @@ void hugWallBackwards()
 		i++;
 		if (j > 0)
 			j--;
-		if (i > 5)
-			i = 5;
+		if (i > 10)
+			i = 10;
 		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - i);
 	}
 	else if (!REAR_SIDE_WALL_HIT)
@@ -131,8 +138,8 @@ void hugWallBackwards()
 		i++;
 		if (j > 0)
 			j--;
-		if (i > 5)
-			i = 5;
+		if (i > 10)
+			i = 10;
 		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - i);
 	}
 	else if (!FRONT_SIDE_WALL_HIT)
@@ -140,8 +147,8 @@ void hugWallBackwards()
 		j++;
 		if (i > 0)
 			i--;
-		if (j > 5)
-			j = 5;
+		if (j > 10)
+			j = 10;
 		pidDrive(-SLOW_SPEED_WALL_WHEEL - j, -SLOW_SPEED_INNER_WHEEL);
 	}
 	else
@@ -190,20 +197,6 @@ void victoryDance()
 	lowerLine();
 	printString_P(PSTR("ReapedYourBalls"));
 
-	// Press button to skip
-	for (u08 i = 0; i < 4 && !getButton1(); i++)
-	{
-		pidDrive(FAST_SPEED_WALL_WHEEL, FAST_SPEED_INNER_WHEEL);
-		scraperDown();
-		delayMs(500);
-		if (getButton1())
-		{
-			break;
-		}
-		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
-		scraperUp();
-		delayMs(700);
-	}
 	haltRobot();
 }
 
@@ -235,14 +228,26 @@ void launcherSpeed(u08 speed)
 
 void scraperDown()
 {
-	servo(SERVO_SCRAPER, SCRAPER_MOSTLY_DOWN);
-	delayMs(400);
-	servo(SERVO_SCRAPER, SCRAPER_DOWN);
+	if (LEFT_ROBOT_ID)
+	{
+		servo(SERVO_SCRAPER, LSCRAPER_MOSTLY_DOWN);
+		delayMs(400);
+		servo(SERVO_SCRAPER, LSCRAPER_DOWN);
+	}
+	else
+	{
+		servo(SERVO_SCRAPER, RSCRAPER_MOSTLY_DOWN);
+		delayMs(400);
+		servo(SERVO_SCRAPER, RSCRAPER_DOWN);
+	}
 }
 
 void scraperUp()
 {
-	servo(SERVO_SCRAPER, SCRAPER_UP);
+	if (LEFT_ROBOT_ID)
+		servo(SERVO_SCRAPER, LSCRAPER_UP);
+	else
+		servo(SERVO_SCRAPER, RSCRAPER_UP);
 }
 
 void feederOn()
@@ -274,9 +279,6 @@ void haltRobot()
 	//power off scraper after it has had time to raise
 	delayMs(500);
 	servoOff(SERVO_SCRAPER);
-
-	clearScreen();
-	printString_P(PSTR("HALTED!"));
 }
 
 void resetEncoders()
