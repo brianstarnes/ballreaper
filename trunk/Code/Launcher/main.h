@@ -15,11 +15,10 @@
 //! The maximum ADC output value. ADC has 1024 output values so it ranges from 0 to 1023.
 #define ADC_MAX 1023
 
-//! The resistance in Ohms of the logic battery's voltage divider resistor connected to positive.
+//! The resistance in Ohms of the battery's voltage divider resistor connected to positive.
 #define RESISTOR_BATTERY_UPPER 10000
-//! The resistance in Ohms of the logic battery's voltage divider resistor connected to ground.
-#define RESISTOR_BATTERY_LOWER 10000
-//! The resistance in Ohms of the motor battery's voltage divider resistor connected to positive.
+//! The resistance in Ohms of the battery's voltage divider resistor connected to ground.
+#define RESISTOR_BATTERY_LOWER 9980
 
 //! The number of Lithium polymer cells in the logic battery pack.
 #define LOGIC_BATTERY_NUM_CELLS 2
@@ -64,8 +63,6 @@ enum servos
 {
 	SERVO_SCRAPER, //!< The servo that raises/lowers the scraper arm used to collect balls from a trough.
 	SERVO_FEEDER, //!< The servo that pushes balls into the launcher wheels.
-	SERVO_LEFT_LAUNCHER, //!< The left launcher wheel motor, controlled via the Sabertooth 2x5.
-	SERVO_RIGHT_LAUNCHER //!< The right launcher wheel motor, controlled via the Sabertooth 2x5.
 };
 
 enum servoPositions

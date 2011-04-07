@@ -2,6 +2,7 @@
 #include "compLeft.h"
 #include "compRight.h"
 #include "debug.h"
+#include "launcherMotors.h"
 #include "launcherPackets.h"
 #include "LCD.h"
 #include "main.h"
@@ -44,6 +45,7 @@ int main()
 	//Initialize XiphosLibrary
 	initialize();
 
+	mosfetInit();
 	rtcInit();
 
 	//Enable ADC interrupt
@@ -60,10 +62,10 @@ int main()
 	initPacketDriver();
 	sendBootNotification(resetCause);
 
-	//configure all digital pins as inputs
-	digitalDirections(0);
-	//enable pullup resistors for all 10 digital inputs
-	digitalPullups(0x3FF);
+	//configure digital pins 2-9 as inputs
+	DDRA = 0;
+	//enable pullup resistors for digital pins 2-9
+	digitalPullups(0x3FC);
 	//enable pullup resistors for all 8 analog inputs
 	analogPullups(0xFF);
 
