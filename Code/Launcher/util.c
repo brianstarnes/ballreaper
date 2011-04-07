@@ -1,6 +1,6 @@
-
 #include "ADC.h"
 #include "debug.h"
+#include "launcherMotors.h"
 #include "launcherPackets.h"
 #include "LCD.h"
 #include "main.h"
@@ -227,10 +227,11 @@ void stop()
 	brake1(255);
 }
 
+//! Sets the speed of the launcher motors: 0-255.
 void launcherSpeed(u08 speed)
 {
-	servo(SERVO_LEFT_LAUNCHER, speed);
-	servo(SERVO_RIGHT_LAUNCHER, speed);
+	mosfet0Power(speed);
+	mosfet1Power(speed);
 }
 
 void scraperDown()
@@ -280,8 +281,8 @@ void haltRobot()
 	feederOff();
 
 	//stop launchers
-	servo(SERVO_LEFT_LAUNCHER, LAUNCHER_SPEED_STOPPED);
-	servo(SERVO_RIGHT_LAUNCHER, LAUNCHER_SPEED_STOPPED);
+	mosfet0Power(0);
+	mosfet1Power(0);
 
 	//power off scraper after it has had time to raise
 	delayMs(500);

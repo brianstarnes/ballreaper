@@ -13,7 +13,7 @@ USE_LCD    = 1
 USE_ADC    = 1
 USE_MOTOR0 = 1
 USE_MOTOR1 = 1
-NUM_SERVOS = 4
+NUM_SERVOS = 2
 USE_I2C    = 0
 
 # Specify any additional .c source files containing your program code.
@@ -21,6 +21,7 @@ FILES = \
   compRight.c \
   compLeft.c \
   debug.c \
+  launcherMotors.c \
   launcherPackets.c \
   packetprotocol.c \
   remoteControl.c \

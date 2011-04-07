@@ -1,5 +1,6 @@
 #include "ADC.h"
 #include "debug.h"
+#include "launcherMotors.h"
 #include "LCD.h"
 #include "motors.h"
 #include "packetprotocol.h"
@@ -14,7 +15,7 @@ volatile u08 DataIndex = 0;
 
 //Prototypes
 inline u16 parse_u16(const u08 * const data);
-void getVersion();
+void sendVersion();
 ServoRange namedServoRangeByIndex(u08 number);
 bool remoteSystemValidator(const u08 packetType, const u08 dataLength);
 void remoteSystemExecutor(const u08 packetType, const u08 * const data, const u08 dataLength);
@@ -53,7 +54,7 @@ inline u16 parse_u16(const u08 * const data)
 }
 
 //! Transmits a pipe-separated string containing various version numbers.
-void getVersion()
+void sendVersion()
 {
 	char *version = VERSION;
 	u08 i = 0;
@@ -147,7 +148,7 @@ void remoteSystemExecutor(const u08 packetType, const u08 * const data, const u0
 	{
 		//parameterless functions
 		case CMD_GET_VERSION:
-			getVersion();
+			sendVersion();
 			break;
 		case CMD_LED_ON:
 			ledOn();
@@ -206,10 +207,12 @@ void remoteSystemExecutor(const u08 packetType, const u08 * const data, const u0
 			{
 				lowerLine();
 			}
-			printString("Off ");
+			printChar('S');
+			printChar(data[0] + '0');
+			printString(" Off");
 			break;
 		//case CMD_PLAY_SOUND:
-		//	playSoundNum(parse_u16(data));
+		//	playSoundNum(data[0]);
 		//	break;
 
 		//two-parameter functions
@@ -243,17 +246,26 @@ void remoteSystemExecutor(const u08 packetType, const u08 * const data, const u0
 			break;
 
 		case CMD_MOTOR:
-			if (data[0] == 0)
+			switch (data[0])
 			{
+				case 0:
 #if USE_MOTOR0 == 1
-				motor0(data[1]);
+					motor0(data[1]);
 #endif
-			}
-			else if (data[0] == 1)
-			{
+					break;
+
+				case 1:
 #if USE_MOTOR1 == 1
-				motor1(data[1]);
+					motor1(data[1]);
 #endif
+					break;
+				case 2:
+					mosfet0Power(data[1]);
+					break;
+
+				case 3:
+					mosfet1Power(data[1]);
+					break;
 			}
 			break;
 		case CMD_LCD_CURSOR:

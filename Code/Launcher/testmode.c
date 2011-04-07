@@ -74,7 +74,7 @@ void testModeExec()
 				case TEST_BatteryVoltage:
 					lowerLine();
 					printVoltage(convertToBatteryVoltage(batteryReading));
-					lcdCursor(0, 9);
+					lcdCursor(1, 9);
 					print_u16(batteryReading);
 					break;
 				case TEST_Switches:
