@@ -75,29 +75,29 @@ enum servoPositions
 	LSCRAPER_UP            = 6, //!< The raised position for the left scraper arm.
 	FEEDER_STOPPED         = 128,
 	FEEDER_RUNNING         = 0,
-	LAUNCHER_SPEED_STOPPED = 128, //!< The center servo setting that the Sabertooth interprets as stopped.
-	LAUNCHER_SPEED_NEAR    = 88, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
-	LAUNCHER_SPEED_FAR     = 58,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
+	LAUNCHER_SPEED_STOPPED = 0,
+	LAUNCHER_SPEED_NEAR    = 100, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
+	LAUNCHER_SPEED_FAR     = 200,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
 };
 
 typedef enum
 {
-	SWITCH_BACK_WALL_LEFT  = 0,
-	SWITCH_BACK_WALL_RIGHT = 1,
-	SWITCH_SIDE_WALL_REAR  = 2,
-	SWITCH_SIDE_WALL_FRONT = 3,
-	SWITCH_FRONT_WALL      = 4,
-	SWITCH_PIVOT           = 5,
+	SWITCH_BACK_WALL_LEFT  = 2,
+	SWITCH_BACK_WALL_RIGHT = 3,
+	SWITCH_SIDE_WALL_REAR  = 4,
+	SWITCH_SIDE_WALL_FRONT = 5,
+	SWITCH_FRONT_WALL      = 6,
+	SWITCH_PIVOT           = 7,
 	SWITCH_SCROLL          = 8,
 	SWITCH_ROBOT_ID        = 9
 } rightSwitch_t;
 
 typedef enum
 {
-	LSWITCH_BACK            = 0,
-	LSWITCH_SIDE_WALL_REAR  = 1,
-	LSWITCH_SIDE_WALL_FRONT = 2,
-	LSWITCH_FRONT           = 3,
+	LSWITCH_BACK            = 3,
+	LSWITCH_SIDE_WALL_REAR  = 4,
+	LSWITCH_SIDE_WALL_FRONT = 5,
+	LSWITCH_FRONT           = 6
 } leftSwitch_t;
 
 typedef enum

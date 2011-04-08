@@ -49,7 +49,10 @@ void testModeExec()
 				printString_P(PSTR("Voltage, Reading"));
 				break;
 			case TEST_Switches:
-				printString_P(PSTR("SW:BL BR SB SF F"));
+				if (LEFT_ROBOT_ID)
+					printString_P(PSTR("SW:B SB SF F"));
+				else
+				  printString_P(PSTR("SW:BL BR SB SF F"));
 				break;
 			case TEST_EncoderTicks:
 				printString_P(PSTR("W EncoderTicks I"));

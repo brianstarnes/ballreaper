@@ -71,13 +71,13 @@ int main()
 
 	//print firmware version and wait for button press
 	printString_P(PSTR("ballReaper v" LAUNCHER_FIRMWARE_VERSION));
-	delayMs(1500);
+	delayMs(1000);
 
 	//Start taking ADC readings
 	ADCSRA |= _BV(ADSC);
 
 	//Make sure launcher is off
-	launcherSpeed(128);
+	launcherSpeed(LAUNCHER_SPEED_STOPPED);
 
 	mainMenu();
 }

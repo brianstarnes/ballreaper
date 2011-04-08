@@ -54,10 +54,10 @@ void compLeftExec()
 					stop();
 
 					//ramp launcher speed down as you get closer to the goal
-					if (launcherMotorSpeed > LAUNCHER_SPEED_NEAR)
+					if (launcherMotorSpeed < LAUNCHER_SPEED_NEAR)
 						launcherMotorSpeed = LAUNCHER_SPEED_NEAR;
 					else
-						launcherMotorSpeed += 7.5;
+						launcherMotorSpeed -= 7;
 
 					launcherSpeed(launcherMotorSpeed);
 
