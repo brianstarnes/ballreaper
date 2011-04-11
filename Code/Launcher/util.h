@@ -5,6 +5,7 @@ extern u08 pidStop;
 
 void pidDrive(s08 wallSpeed, s08 innerSpeed);
 void pidExec();
+void driveForward(s08 wallSpeed, s08 innerSpeed);
 void turnLeft();
 void turnRight();
 void stop();

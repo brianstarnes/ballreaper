@@ -43,23 +43,48 @@ void compRightExec()
 {
 	switch (compState) {
 		case COMP_DRIVE_FORWARD:
+		{
+			u08 adjustWall;
+			u08 adjustInner;
+
+			adjustWall = 2 * ((BACK_WALL_TICK_LEN - wallEncoderTicks) /
+					     ((FAST_SPEED_WALL_WHEEL - SLOW_SPEED_WALL_WHEEL)/2));
+
+			adjustInner = 2 * ((BACK_WALL_TICK_LEN - innerEncoderTicks) /
+					      ((FAST_SPEED_INNER_WHEEL - SLOW_SPEED_INNER_WHEEL)/2));
+
+			if (adjustWall < 0)
+				adjustWall = 0;
+
+			if (adjustInner < 0)
+				adjustInner = 0;
+
+			pidDrive(SLOW_SPEED_WALL_WHEEL + adjustWall, SLOW_SPEED_INNER_WHEEL + adjustInner);
+
 			//drive until either side wall switches hit
 			if (REAR_SIDE_WALL_HIT || FRONT_SIDE_WALL_HIT)
 			{
-				compTurnLeft();
+				delayMs(500);
 				pidStop = TRUE;
+				compTurnLeft();
 				compState = COMP_TURN_LEFT;
 			}
 			break;
+		}
 
 		case COMP_TURN_LEFT:
 			// Turn left until you hit the 90 switch
 			if (PIVOT_HIT)
 			{
-				// Start Ball Reaping! We only get 2 refills so make them count!
-				compCollectFwd();
-
-				compState = COMP_COLLECT_DRV_FWD;
+				//Drive backwards into wall until back right switch hits
+				if (!BACK_RIGHT_HIT)
+					driveForward (-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
+				else
+				{
+					// Start Ball Reaping! We only get 2 refills so make them count!
+					compCollectFwd();
+					compState = COMP_COLLECT_DRV_FWD;
+				}
 			}
 			break;
 
@@ -81,10 +106,10 @@ void compRightExec()
 					stop();
 
 					//ramp launcher speed down as you get closer to the goal
-					if (launcherMotorSpeed > LAUNCHER_SPEED_NEAR)
+					if (launcherMotorSpeed < LAUNCHER_SPEED_NEAR)
 						launcherMotorSpeed = LAUNCHER_SPEED_NEAR;
 					else
-						launcherMotorSpeed += 7.5;
+						launcherMotorSpeed -= 7;
 
 					launcherSpeed(launcherMotorSpeed);
 
@@ -100,7 +125,7 @@ void compRightExec()
 				refills++;
 				stop();
 				delayMs(15000);
-				if (refills == 2)
+				if (refills == 6)
 				{
 					compDone();
 					compState = COMP_DONE;
@@ -113,7 +138,8 @@ void compRightExec()
 			}
 			else
 			{
-				hugWallBackwards();
+				pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL - 2);
+				//hugWallBackwards();
 			}
 			break;
 
@@ -130,6 +156,7 @@ static void compStart()
 	printString_P(PSTR("Drive forward"));
 
 	pidDrive(FAST_SPEED_WALL_WHEEL, FAST_SPEED_INNER_WHEEL);
+	resetEncoders();
 }
 
 static void compTurnLeft()

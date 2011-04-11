@@ -59,6 +59,9 @@
 // Robot ID input
 #define LEFT_ROBOT_ID        !digitalInput(SWITCH_ROBOT_ID)
 
+//Back wall length in ticks
+#define BACK_WALL_TICK_LEN   330
+
 enum servos
 {
 	SERVO_SCRAPER, //!< The servo that raises/lowers the scraper arm used to collect balls from a trough.
@@ -128,12 +131,14 @@ typedef enum
 //wall motor is stronger/faster
 enum motorSpeeds
 {
-	FAST_SPEED_INNER_WHEEL = 33,
-	FAST_SPEED_WALL_WHEEL  = 33,
-	SLOW_SPEED_INNER_WHEEL = 26,
-	SLOW_SPEED_WALL_WHEEL  = 26,
-	TURN_SPEED_INNER_WHEEL = 45,
-	TURN_SPEED_WALL_WHEEL  = 45
+	FAST_SPEED_INNER_WHEEL    = 50,
+	FAST_SPEED_WALL_WHEEL     = 50,
+	SLOW_SPEED_INNER_WHEEL    = 22,
+	SLOW_SPEED_WALL_WHEEL     = 22,
+	SLOW_SPEED_BK_INNER_WHEEL = 15,
+	SLOW_SPEED_BK_WALL_WHEEL  = 15,
+	TURN_SPEED_INNER_WHEEL    = 35,
+	TURN_SPEED_WALL_WHEEL     = 35
 };
 
 //Prototypes
