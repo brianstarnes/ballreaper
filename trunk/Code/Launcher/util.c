@@ -18,6 +18,16 @@ static s08 innerSpeed = 0;
 static int i, j;
 u08 pidStop = TRUE;
 
+
+#define LIMIT(v, min, max) (((v) < (min)) ? (min) : (((v) > (max)) ? (max) : (v)))
+
+
+void driveForward(s08 w, s08 i)
+{
+	wallMotor(LIMIT(w, -100, 100));
+	innerMotor(LIMIT(i, -100, 100));
+}
+
 void pidDrive(s08 w, s08 i)
 {
 	wallSpeed = w;
@@ -25,8 +35,6 @@ void pidDrive(s08 w, s08 i)
 
 	pidStop = FALSE;
 }
-
-#define LIMIT(v, min, max) (((v) < (min)) ? (min) : (((v) > (max)) ? (max) : (v)))
 
 void pidExec()
 {
@@ -75,8 +83,9 @@ void compCollectBack()
 	i = j = 0;
 
 	stop();
-	delayMs(500);
 	scraperUp();
+	feederOff();
+	delayMs(500);
 
 	// Start driving backwards to get a refill
 	clearScreen();
@@ -88,23 +97,22 @@ void hugWallForwards()
 	if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
 	{
 		//lost the wall, turn back into the wall
-		if (j < 5)
-			j++;
-		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
-	}
-	else if (!PIVOT_HIT && !LEFT_ROBOT_ID)
-	{
-		turnLeft();
+		if (j < 11)
+			j+=2;
+
+		pidStop = TRUE;
+		driveForward(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
 	}
 	else if (!FRONT_SIDE_WALL_HIT)
 	{
 		//Turn into the wall
-		j++;
 		if (i > 0)
 			i--;
-		if (j > 5)
-			j = 5;
-		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
+		if (j < 11)
+			j += 2;
+
+		pidStop = TRUE;
+		driveForward(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
 	}
 	else if (!REAR_SIDE_WALL_HIT)
 	{
@@ -114,12 +122,15 @@ void hugWallForwards()
 			j--;
 		if (i > 5)
 			i = 5;
-		pidDrive(SLOW_SPEED_WALL_WHEEL + i, SLOW_SPEED_INNER_WHEEL);
+
+		pidStop = TRUE;
+		driveForward(SLOW_SPEED_WALL_WHEEL + i, SLOW_SPEED_INNER_WHEEL);
 
 	}
 	else
 	{
 		//Drive straight
+		pidStop = FALSE;
 		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
 		i = j = 0;
 	}
@@ -129,38 +140,40 @@ void hugWallBackwards()
 {
 	if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
 	{
-		//lost the wall
-		i++;
+		//lost the wall, try turning back into it
 		if (j > 0)
 			j--;
-		if (i > 5)
-			i = 5;
-		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - i);
+		if (i < 5)
+			i ++;
+
+		pidStop = TRUE;
+		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL - i);
 	}
 	else if (!REAR_SIDE_WALL_HIT)
 	{
 		//Turn into the wall
-		i++;
 		if (j > 0)
 			j--;
-		if (i > 5)
-			i = 5;
-		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - i);
+		if (i < 5)
+			i ++;
+		pidStop = TRUE;
+		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL - i);
 	}
 	else if (!FRONT_SIDE_WALL_HIT)
 	{
 		//Turn away from the wall
-		j++;
 		if (i > 0)
 			i--;
-		if (j > 5)
-			j = 5;
-		pidDrive(-SLOW_SPEED_WALL_WHEEL - j, -SLOW_SPEED_INNER_WHEEL);
+		if (j < 5)
+			j++;
+		pidStop = TRUE;
+		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL - j, -SLOW_SPEED_BK_INNER_WHEEL);
 	}
 	else
 	{
 		//Drive straight
-		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
+		pidStop = FALSE;
+		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL);
 		i = j = 0;
 	}
 }
