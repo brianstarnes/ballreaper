@@ -16,6 +16,9 @@ void rtcInit()
 	//registers TCNT2, OCR2A, OCR2B, TCCR2A, and TCCR2B.
 	ASSR = _BV(AS2);
 
+	//Normal port operation, normal WGM.
+	TCCR2A = 0;
+
 	//Enable timer2 overflow interrupt.
 	TIMSK2 = _BV(TOIE2);
 }

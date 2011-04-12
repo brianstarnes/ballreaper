@@ -16,6 +16,7 @@
 static int compState;
 static u08 refills = 0;
 static u08 launcherMotorSpeed;
+static u08 startTimeSecs;
 
 enum {
 	COMP_COLLECT_DRV_FWD,
@@ -31,6 +32,7 @@ void compLeftInit()
 
 	resetEncoders();
 	compCollectFwd();
+	startTimeSecs = secCount;
 	compState = COMP_COLLECT_DRV_FWD;
 }
 
@@ -38,42 +40,45 @@ void compLeftExec()
 {
 	switch (compState) {
 		case COMP_COLLECT_DRV_FWD:
-			if (LFRONT_HIT)
+			if (LFRONT_HIT || (secCount - startTimeSecs) > 18)
 			{
 				compCollectBack();
+				startTimeSecs = secCount;
 				compState = COMP_COLLECT_DRV_BACK;
 			}
 			else {
 				/* Pause every couple ticks to give the feeder and shooter time to get rid
 				 * of the balls we just collected so that we don't drop any.
 				 */
-				if (innerEncoderTicks < 40 || wallEncoderTicks < 40)
+				if (innerEncoderTicks < 30 || wallEncoderTicks < 30)
 				  hugWallForwards();
 				else
 				{
 					stop();
+					delayMs(2000);
 
-					//ramp launcher speed down as you get closer to the goal
+					// ramp launcher speed down as you get closer to the goal
+					launcherMotorSpeed -= 7;
+					// ensure that we keep a minimum launcher speed.
 					if (launcherMotorSpeed < LAUNCHER_SPEED_NEAR)
 						launcherMotorSpeed = LAUNCHER_SPEED_NEAR;
-					else
-						launcherMotorSpeed -= 7;
 
 					launcherSpeed(launcherMotorSpeed);
 
 					resetEncoders();
-					delayMs(2000);
 				}
 			}
 			break;
 
 		case COMP_COLLECT_DRV_BACK:
-			if (LBACK_HIT)
+			if (LBACK_HIT || (secCount - startTimeSecs) > 6)
 			{
 				refills++;
 				stop();
+				clearScreen();
+				printString_P(PSTR("Waiting 4 reload"));
 				delayMs(15000);
-				if (refills == 2)
+				if (refills == 6)
 				{
 					compDone();
 					compState = COMP_DONE;
@@ -81,6 +86,7 @@ void compLeftExec()
 				else
 				{
 					compCollectFwd();
+					startTimeSecs = secCount;
 					compState = COMP_COLLECT_DRV_FWD;
 				}
 			}

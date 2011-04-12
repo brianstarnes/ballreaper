@@ -2,7 +2,6 @@
 #include "compLeft.h"
 #include "compRight.h"
 #include "debug.h"
-#include "launcherMotors.h"
 #include "launcherPackets.h"
 #include "LCD.h"
 #include "main.h"
@@ -45,7 +44,6 @@ int main()
 	//Initialize XiphosLibrary
 	initialize();
 
-	mosfetInit();
 	rtcInit();
 
 	//Enable ADC interrupt
@@ -181,8 +179,6 @@ static void mainMenu()
 		pProgExec();
 
 		pidExec();
-
-		delayMs(20);
 	}
 }
 

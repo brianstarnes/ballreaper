@@ -66,6 +66,8 @@ enum servos
 {
 	SERVO_SCRAPER, //!< The servo that raises/lowers the scraper arm used to collect balls from a trough.
 	SERVO_FEEDER, //!< The servo that pushes balls into the launcher wheels.
+	SERVO_LEFT_LAUNCHER, //!< The left launcher wheel motor, controlled via the RoboClaw.
+	SERVO_RIGHT_LAUNCHER //!< The right launcher wheel motor, controlled via the RoboClaw.
 };
 
 enum servoPositions
@@ -78,8 +80,8 @@ enum servoPositions
 	LSCRAPER_UP            = 6, //!< The raised position for the left scraper arm.
 	FEEDER_STOPPED         = 128,
 	FEEDER_RUNNING         = 0,
-	LAUNCHER_SPEED_STOPPED = 0,
-	LAUNCHER_SPEED_NEAR    = 100, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
+	LAUNCHER_SPEED_STOPPED = 128, //!< The center servo setting that the RoboClaw interprets as stopped.
+	LAUNCHER_SPEED_NEAR    = 168, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
 	LAUNCHER_SPEED_FAR     = 200,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
 };
 
@@ -133,10 +135,10 @@ enum motorSpeeds
 {
 	FAST_SPEED_INNER_WHEEL    = 50,
 	FAST_SPEED_WALL_WHEEL     = 50,
-	SLOW_SPEED_INNER_WHEEL    = 22,
-	SLOW_SPEED_WALL_WHEEL     = 22,
-	SLOW_SPEED_BK_INNER_WHEEL = 15,
-	SLOW_SPEED_BK_WALL_WHEEL  = 15,
+	SLOW_SPEED_INNER_WHEEL    = 20,
+	SLOW_SPEED_WALL_WHEEL     = 20,
+	SLOW_SPEED_BK_INNER_WHEEL = 13,
+	SLOW_SPEED_BK_WALL_WHEEL  = 13,
 	TURN_SPEED_INNER_WHEEL    = 35,
 	TURN_SPEED_WALL_WHEEL     = 35
 };
