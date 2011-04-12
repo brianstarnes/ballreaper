@@ -27,6 +27,7 @@ enum {
 static int compState;
 static u08 refills = 0;
 static u08 launcherMotorSpeed;
+static u08 startTimeSecs;
 
 void compRightInit()
 {
@@ -44,14 +45,13 @@ void compRightExec()
 	switch (compState) {
 		case COMP_DRIVE_FORWARD:
 		{
-			u08 adjustWall;
-			u08 adjustInner;
+			s16 adjustWall;
+			s16 adjustInner;
 
-			adjustWall = 2 * ((BACK_WALL_TICK_LEN - wallEncoderTicks) /
-					     ((FAST_SPEED_WALL_WHEEL - SLOW_SPEED_WALL_WHEEL)/2));
 
-			adjustInner = 2 * ((BACK_WALL_TICK_LEN - innerEncoderTicks) /
-					      ((FAST_SPEED_INNER_WHEEL - SLOW_SPEED_INNER_WHEEL)/2));
+
+			adjustWall = (BACK_WALL_TICK_LEN - wallEncoderTicks) * FAST_SPEED_WALL_WHEEL / BACK_WALL_TICK_LEN;
+			adjustInner = (BACK_WALL_TICK_LEN - innerEncoderTicks) * FAST_SPEED_INNER_WHEEL / BACK_WALL_TICK_LEN;
 
 			if (adjustWall < 0)
 				adjustWall = 0;
@@ -78,20 +78,24 @@ void compRightExec()
 			{
 				//Drive backwards into wall until back right switch hits
 				if (!BACK_RIGHT_HIT)
-					driveForward (-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
+					driveForward(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
 				else
 				{
 					// Start Ball Reaping! We only get 2 refills so make them count!
 					compCollectFwd();
+					// initialize launcher speed variable to the same value used in compCollectFwd
+					launcherMotorSpeed = LAUNCHER_SPEED_FAR;
+					startTimeSecs = secCount;
 					compState = COMP_COLLECT_DRV_FWD;
 				}
 			}
 			break;
 
 		case COMP_COLLECT_DRV_FWD:
-			if (FRONT_HIT)
+			if (FRONT_HIT || (secCount - startTimeSecs) > 18)
 			{
 				compCollectBack();
+				startTimeSecs = secCount;
 				compState = COMP_COLLECT_DRV_BACK;
 			}
 			else
@@ -104,23 +108,23 @@ void compRightExec()
 				else
 				{
 					stop();
+					delayMs(2000);
 
-					//ramp launcher speed down as you get closer to the goal
+					// ramp launcher speed down as you get closer to the goal
+					launcherMotorSpeed -= 7;
+					// ensure that we keep a minimum launcher speed.
 					if (launcherMotorSpeed < LAUNCHER_SPEED_NEAR)
 						launcherMotorSpeed = LAUNCHER_SPEED_NEAR;
-					else
-						launcherMotorSpeed -= 7;
 
 					launcherSpeed(launcherMotorSpeed);
 
 					resetEncoders();
-					delayMs(2000);
 				}
 			}
 			break;
 
 		case COMP_COLLECT_DRV_BACK:
-			if (BACK_RIGHT_HIT || BACK_LEFT_HIT)
+			if (BACK_RIGHT_HIT || BACK_LEFT_HIT || (secCount - startTimeSecs) > 6)
 			{
 				refills++;
 				stop();
@@ -133,6 +137,7 @@ void compRightExec()
 				else
 				{
 					compCollectFwd();
+					startTimeSecs = secCount;
 					compState = COMP_COLLECT_DRV_FWD;
 				}
 			}

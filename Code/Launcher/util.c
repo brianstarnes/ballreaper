@@ -1,6 +1,5 @@
 #include "ADC.h"
 #include "debug.h"
-#include "launcherMotors.h"
 #include "launcherPackets.h"
 #include "LCD.h"
 #include "main.h"
@@ -94,45 +93,35 @@ void compCollectBack()
 
 void hugWallForwards()
 {
+	lowerLine();
 	if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
 	{
+		printString_P(PSTR("Lost"));
 		//lost the wall, turn back into the wall
-		if (j < 11)
-			j+=2;
-
 		pidStop = TRUE;
-		driveForward(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
+		driveForward(SLOW_SPEED_WALL_WHEEL - 7, SLOW_SPEED_INNER_WHEEL + 10);
 	}
 	else if (!FRONT_SIDE_WALL_HIT)
 	{
+		printString_P(PSTR("into"));
 		//Turn into the wall
-		if (i > 0)
-			i--;
-		if (j < 11)
-			j += 2;
-
 		pidStop = TRUE;
-		driveForward(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + j);
+		driveForward(SLOW_SPEED_WALL_WHEEL - 7, SLOW_SPEED_INNER_WHEEL + 10);
 	}
+/*
 	else if (!REAR_SIDE_WALL_HIT)
 	{
+		printString_P(PSTR("away"));
 		//Turn away from the wall
-		i++;
-		if (j > 0)
-			j--;
-		if (i > 5)
-			i = 5;
-
 		pidStop = TRUE;
-		driveForward(SLOW_SPEED_WALL_WHEEL + i, SLOW_SPEED_INNER_WHEEL);
-
+		driveForward(SLOW_SPEED_WALL_WHEEL + 20, SLOW_SPEED_INNER_WHEEL);
 	}
+*/
 	else
 	{
+		printString_P(PSTR("strt"));
 		//Drive straight
-		pidStop = FALSE;
-		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL);
-		i = j = 0;
+		pidDrive(SLOW_SPEED_WALL_WHEEL, SLOW_SPEED_INNER_WHEEL + 3);
 	}
 }
 
@@ -141,38 +130,27 @@ void hugWallBackwards()
 	if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
 	{
 		//lost the wall, try turning back into it
-		if (j > 0)
-			j--;
 		if (i < 5)
 			i ++;
-
-		pidStop = TRUE;
 		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL - i);
 	}
 	else if (!REAR_SIDE_WALL_HIT)
 	{
 		//Turn into the wall
-		if (j > 0)
-			j--;
 		if (i < 5)
 			i ++;
-		pidStop = TRUE;
 		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL - i);
 	}
 	else if (!FRONT_SIDE_WALL_HIT)
 	{
 		//Turn away from the wall
-		if (i > 0)
-			i--;
 		if (j < 5)
 			j++;
-		pidStop = TRUE;
 		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL - j, -SLOW_SPEED_BK_INNER_WHEEL);
 	}
 	else
 	{
 		//Drive straight
-		pidStop = FALSE;
 		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL);
 		i = j = 0;
 	}
@@ -240,11 +218,11 @@ void stop()
 	brake1(255);
 }
 
-//! Sets the speed of the launcher motors: 0-255.
+//! Sets the speed of the launcher motors: 128-255 for forward operation.
 void launcherSpeed(u08 speed)
 {
-	mosfet0Power(speed);
-	mosfet1Power(speed);
+	servo(SERVO_LEFT_LAUNCHER, speed);
+	servo(SERVO_RIGHT_LAUNCHER, speed);
 }
 
 void scraperDown()
@@ -294,8 +272,8 @@ void haltRobot()
 	feederOff();
 
 	//stop launchers
-	mosfet0Power(0);
-	mosfet1Power(0);
+	servo(SERVO_LEFT_LAUNCHER, LAUNCHER_SPEED_STOPPED);
+	servo(SERVO_RIGHT_LAUNCHER, LAUNCHER_SPEED_STOPPED);
 
 	//power off scraper after it has had time to raise
 	delayMs(500);

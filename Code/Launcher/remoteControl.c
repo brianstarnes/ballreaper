@@ -1,6 +1,5 @@
 #include "ADC.h"
 #include "debug.h"
-#include "launcherMotors.h"
 #include "LCD.h"
 #include "motors.h"
 #include "packetprotocol.h"
@@ -258,13 +257,6 @@ void remoteSystemExecutor(const u08 packetType, const u08 * const data, const u0
 #if USE_MOTOR1 == 1
 					motor1(data[1]);
 #endif
-					break;
-				case 2:
-					mosfet0Power(data[1]);
-					break;
-
-				case 3:
-					mosfet1Power(data[1]);
 					break;
 			}
 			break;
