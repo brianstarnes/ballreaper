@@ -146,7 +146,7 @@ static void mainMenu()
 	while (1)
 	{
 		pProgExec();
-		launcherExec();
+		//launcherExec();
 	}
 }
 

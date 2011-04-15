@@ -12,7 +12,7 @@ USE_LCD    = 1
 USE_ADC    = 1
 USE_MOTOR0 = 1
 USE_MOTOR1 = 1
-NUM_SERVOS = 4
+NUM_SERVOS = 5
 USE_I2C    = 0
 
 # Specify any additional .c source files containing your program code.
