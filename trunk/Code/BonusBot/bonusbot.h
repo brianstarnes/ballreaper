@@ -65,9 +65,9 @@ typedef enum
 
 enum motorSpeeds
 {
-	DRIVE_STOP       = 128,
-	DRIVE_SLOW_SPEED = 80,
-	DRIVE_FAST_SPEED = 20
+	DRIVE_STOP       = 0,
+	DRIVE_SLOW_SPEED = 60,
+	DRIVE_FAST_SPEED = 100
 };
 
 extern volatile u08 encoderUpdated;

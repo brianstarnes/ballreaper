@@ -56,33 +56,33 @@ void compInit()
 void frontLeft(u08 speed, u08 direction)
 {
 	if (direction)
-		servo(SERVO_FRONT_LEFT, speed);
+		servo(SERVO_FRONT_LEFT, 128 - speed);
 	else
-		servo(SERVO_FRONT_LEFT, 127 + speed);
+		servo(SERVO_FRONT_LEFT, 128 + speed);
 }
 
 void frontRight(u08 speed, u08 direction)
 {
 	if (direction)
-		servo(SERVO_FRONT_RIGHT, speed);
+		servo(SERVO_FRONT_RIGHT, 128 - speed);
 	else
-		servo(SERVO_FRONT_RIGHT, 127 + speed);
+		servo(SERVO_FRONT_RIGHT, 128 + speed);
 }
 
 void backRight(u08 speed, u08 direction)
 {
 	if (direction)
-		servo(SERVO_BACK_RIGHT, speed);
+		servo(SERVO_BACK_RIGHT, 128 - speed);
 	else
-		servo(SERVO_BACK_RIGHT, 127 + speed);
+		servo(SERVO_BACK_RIGHT, 128 + speed);
 }
 
 void backLeft(u08 speed, u08 direction)
 {
 	if (direction)
-		servo(SERVO_BACK_LEFT, speed);
+		servo(SERVO_BACK_LEFT, 128 - speed);
 	else
-		servo(SERVO_BACK_LEFT, 127 + speed);
+		servo(SERVO_BACK_LEFT, 128 + speed);
 }
 
 void driveForward(void)
