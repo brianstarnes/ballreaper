@@ -79,9 +79,9 @@ enum servoPositions
 	LSCRAPER_MOSTLY_DOWN   = 127, //!< The initial position to lower the left scraper arm to to avoid whacking the trough.
 	LSCRAPER_UP            = 6, //!< The raised position for the left scraper arm.
 	FEEDER_STOPPED         = 128,
-	FEEDER_RUNNING         = 0,
+	FEEDER_RUNNING         = 200,
 	LAUNCHER_SPEED_STOPPED = 128, //!< The center servo setting that the RoboClaw interprets as stopped.
-	LAUNCHER_SPEED_NEAR    = 170, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
+	LAUNCHER_SPEED_NEAR    = 140, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
 	LAUNCHER_SPEED_FAR     = 160,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
 };
 
@@ -133,8 +133,8 @@ enum motorSpeeds
 	SLOW_SPEED_WALL_WHEEL     = 20,
 	SLOW_SPEED_BK_INNER_WHEEL = 13,
 	SLOW_SPEED_BK_WALL_WHEEL  = 13,
-	TURN_SPEED_INNER_WHEEL    = 35,
-	TURN_SPEED_WALL_WHEEL     = 35
+	TURN_SPEED_INNER_WHEEL    = 45,
+	TURN_SPEED_WALL_WHEEL     = 45
 };
 
 //Prototypes

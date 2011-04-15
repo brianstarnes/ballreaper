@@ -1,4 +1,5 @@
 #include "rtc.h"
+#include <util/atomic.h>
 
 //There is an external 32.768kHz watch crystal attached to the Xiphos board,
 //which can be used as the clock source for timer2 to allow keeping of real time.
@@ -7,6 +8,7 @@
 
 //! The number of seconds that have elapsed since the RTC was started.
 volatile u08 secCount;
+volatile u16 tickCount;
 
 //! Initializes the RTC timer/counter, but does not start it.
 void rtcInit()
@@ -58,8 +60,8 @@ void rtcPause()
  */
 void rtcResume()
 {
-	//Set timer2 prescaler to 128, so the 8-bit timer2 will overflow exactly once per second.
-	TCCR2B = _BV(CS22) | _BV(CS20);
+	//Set timer2 prescaler to 32, so the 8-bit timer2 will overflow exactly 4 times per second.
+	TCCR2B = _BV(CS21) | _BV(CS20);
 
 	//Wait for TCCR2B to finish updating, to prevent user from writing again too soon
 	//and corrupting the register.
@@ -69,6 +71,18 @@ void rtcResume()
 //! Fires when timer2 overflows, which means that one second has elapsed.
 ISR(TIMER2_OVF_vect)
 {
-	//Increment the elapsed seconds.
-	secCount++;
+	//Increment the elapsed quarter-seconds.
+	tickCount++;
+	secCount = tickCount >> 2;
+}
+
+//
+u32 getMsCount()
+{
+	u32 temp;
+	ATOMIC_BLOCK(ATOMIC_FORCEON)
+	{
+		temp = tickCount;
+	}
+	return temp * 250;
 }

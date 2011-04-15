@@ -10,6 +10,7 @@
 #include "util.h"
 #include "utility.h"
 
+#include <math.h>
 #include <util/atomic.h>
 
 static s08 wallSpeed = 0;
@@ -17,9 +18,13 @@ static s08 innerSpeed = 0;
 static int i, j;
 u08 pidStop = TRUE;
 
+static s16 curLauncherSpeed = 128;
+static s16 requestedLauncherSpeed = 128;
+
+#define LAUNCHER_SPEED_STEP 1
 
 #define LIMIT(v, min, max) (((v) < (min)) ? (min) : (((v) > (max)) ? (max) : (v)))
-
+#define ABS(v) (((v) < 0) ? -(v) : (v))
 
 void driveForward(s08 w, s08 i)
 {
@@ -69,7 +74,6 @@ void compCollectFwd()
 	scraperDown();
 	feederOn();
 	launcherSpeed(LAUNCHER_SPEED_FAR);
-	delayMs(2000);
 
 	clearScreen();
     printString_P(PSTR("Drive forward"));
@@ -84,6 +88,7 @@ void compCollectBack()
 	stop();
 	scraperUp();
 	feederOff();
+	launcherSpeed(LAUNCHER_SPEED_STOPPED);
 	delayMs(500);
 
 	// Start driving backwards to get a refill
@@ -127,32 +132,26 @@ void hugWallForwards()
 
 void hugWallBackwards()
 {
+	lowerLine();
 	if (!REAR_SIDE_WALL_HIT && !FRONT_SIDE_WALL_HIT)
 	{
-		//lost the wall, try turning back into it
-		if (i < 5)
-			i ++;
-		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL - i);
+		printString_P(PSTR("Lost"));
+		//lost the wall, turn back into the wall
+		pidStop = TRUE;
+		driveForward(-SLOW_SPEED_WALL_WHEEL + 7, -SLOW_SPEED_INNER_WHEEL - 10);
 	}
 	else if (!REAR_SIDE_WALL_HIT)
 	{
+		printString_P(PSTR("into"));
 		//Turn into the wall
-		if (i < 5)
-			i ++;
-		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL - i);
-	}
-	else if (!FRONT_SIDE_WALL_HIT)
-	{
-		//Turn away from the wall
-		if (j < 5)
-			j++;
-		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL - j, -SLOW_SPEED_BK_INNER_WHEEL);
+		pidStop = TRUE;
+		driveForward(-SLOW_SPEED_WALL_WHEEL + 7, -SLOW_SPEED_INNER_WHEEL - 10);
 	}
 	else
 	{
+		printString_P(PSTR("strt"));
 		//Drive straight
-		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL);
-		i = j = 0;
+		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - 3);
 	}
 }
 
@@ -221,8 +220,33 @@ void stop()
 //! Sets the speed of the launcher motors: 128-255 for forward operation.
 void launcherSpeed(u08 speed)
 {
-	servo(SERVO_LEFT_LAUNCHER, speed);
-	servo(SERVO_RIGHT_LAUNCHER, speed);
+	requestedLauncherSpeed = speed;
+}
+
+void launcherExec()
+{
+	u32 curTime = getMsCount();
+
+	if ((curTime - lastUpdateTime) > 250)
+	{
+		if (ABS(requestedLauncherSpeed - curLauncherSpeed) <= LAUNCHER_SPEED_STEP)
+			curLauncherSpeed = requestedLauncherSpeed;
+		else if (requestedLauncherSpeed > curLauncherSpeed)
+			curLauncherSpeed += LAUNCHER_SPEED_STEP;
+		else if (requestedLauncherSpeed < curLauncherSpeed)
+			curLauncherSpeed -= LAUNCHER_SPEED_STEP;
+
+		servo(SERVO_LEFT_LAUNCHER, curLauncherSpeed);
+		servo(SERVO_RIGHT_LAUNCHER, curLauncherSpeed);
+	}
+/*
+	//channel 1 or shutdown
+	uart1Transmit(curLauncherSpeed);
+	if (curLauncherSpeed != 0)
+	{
+		//channel 2
+		uart1Transmit(128 + curLauncherSpeed);
+	}*/
 }
 
 void scraperDown()

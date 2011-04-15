@@ -7,12 +7,13 @@ void uart0Init();
 
 void uart0Transmit(u08 data);
 
+void uart1Transmit(u08 data);
+
 u08 uart0Receive();
 
 void usart0Flush();
 
-//Only the ATmega644P has a second UART
-#if defined(__AVR_ATmega644P__)
+#if defined (UBRR1H)
 	void uart1Init();
 #endif
 

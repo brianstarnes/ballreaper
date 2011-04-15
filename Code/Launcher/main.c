@@ -33,14 +33,9 @@ volatile bool pause = FALSE;
 //Local prototypes
 static void mainMenu();
 
-//! Initializes XiphosLibrary, pullups, and timers, sends bootup packet, prints version.
+//! Initializes XiphosLibrary, pullups, and timers, prints version.
 int main()
 {
-	//query what kind of reset caused this bootup
-	u08 resetCause = MCUSR;
-	//reset the MCU Status Register
-	MCUSR = 0;
-
 	//Initialize XiphosLibrary
 	initialize();
 
@@ -55,10 +50,9 @@ int main()
 	//enable interrupts
 	sei();
 
-	//Initialize UART and packet system then send boot packet
+	//Initialize UART
 	uart0Init();
-	initPacketDriver();
-	sendBootNotification(resetCause);
+	uart1Init();
 
 	//configure digital pins 2-9 as inputs
 	DDRA = 0;
@@ -76,6 +70,7 @@ int main()
 
 	//Make sure launcher is off
 	launcherSpeed(LAUNCHER_SPEED_STOPPED);
+	uart1Transmit(0);
 
 	mainMenu();
 }
@@ -174,11 +169,34 @@ static void mainMenu()
 
 	pProgInit();
 
+
+	u32 priorMs = 0xFF;
 	while (1)
 	{
 		pProgExec();
 
+		launcherExec();
 		pidExec();
+
+		u32 msCount = getMsCount();
+		u08 seconds = msCount / 1000;
+
+		// only print when the seconds have changed
+		if (msCount != priorMs)
+		{
+			priorMs = msCount;
+			lcdCursor(0, 11);
+
+
+			// print minutes
+			printChar((seconds / 60) + '0');
+			printChar(':');
+			// print seconds (tens digit)
+			printChar(((seconds % 60) / 10) + '0');
+			// print seconds (ones digit)
+			printChar(((seconds % 60) % 10) + '0');
+			printChar('s');
+		}
 	}
 }
 
