@@ -9,7 +9,6 @@ void driveForward(s08 wallSpeed, s08 innerSpeed);
 void turnLeft();
 void turnRight();
 void stop();
-void launcherSpeed(u08 speed);
 void scraperDown();
 void scraperUp();
 void feederOn();
@@ -24,5 +23,8 @@ void hugWallForwards();
 void hugWallBackwards();
 void victoryDance();
 u16 convertToBatteryVoltage(u16 reading);
+
+void launcherSpeed(u08 speed);
+void launcherExec();
 
 #endif

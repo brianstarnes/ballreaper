@@ -8,3 +8,4 @@ void rtcInit();
 void rtcRestart();
 void rtcPause();
 void rtcResume();
+u32 getMsCount();

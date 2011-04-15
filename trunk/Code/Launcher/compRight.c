@@ -26,7 +26,6 @@ enum {
 
 static int compState;
 static u08 refills = 0;
-static u08 launcherMotorSpeed;
 static u08 startTimeSecs;
 
 void compRightInit()
@@ -49,17 +48,20 @@ void compRightExec()
 			s16 adjustInner;
 
 
-
-			adjustWall = (BACK_WALL_TICK_LEN - wallEncoderTicks) * FAST_SPEED_WALL_WHEEL / BACK_WALL_TICK_LEN;
-			adjustInner = (BACK_WALL_TICK_LEN - innerEncoderTicks) * FAST_SPEED_INNER_WHEEL / BACK_WALL_TICK_LEN;
+			adjustWall  = ((BACK_WALL_TICK_LEN - (s16)wallEncoderTicks)  * (FAST_SPEED_WALL_WHEEL -  SLOW_SPEED_WALL_WHEEL))  / BACK_WALL_TICK_LEN;
+			adjustInner = ((BACK_WALL_TICK_LEN - (s16)innerEncoderTicks) * (FAST_SPEED_INNER_WHEEL - SLOW_SPEED_INNER_WHEEL)) / BACK_WALL_TICK_LEN;
 
 			if (adjustWall < 0)
 				adjustWall = 0;
+			else if (adjustWall > (FAST_SPEED_WALL_WHEEL -  SLOW_SPEED_WALL_WHEEL))
+				adjustWall = FAST_SPEED_WALL_WHEEL -  SLOW_SPEED_WALL_WHEEL;
 
 			if (adjustInner < 0)
 				adjustInner = 0;
+			else if (adjustInner > (FAST_SPEED_INNER_WHEEL -  SLOW_SPEED_INNER_WHEEL))
+				adjustInner = FAST_SPEED_INNER_WHEEL -  SLOW_SPEED_INNER_WHEEL;
 
-			pidDrive(SLOW_SPEED_WALL_WHEEL + adjustWall, SLOW_SPEED_INNER_WHEEL + adjustInner);
+			pidDrive((u08)(SLOW_SPEED_WALL_WHEEL + adjustWall), (u08)(SLOW_SPEED_INNER_WHEEL + adjustInner));
 
 			//drive until either side wall switches hit
 			if (REAR_SIDE_WALL_HIT || FRONT_SIDE_WALL_HIT)
@@ -83,8 +85,7 @@ void compRightExec()
 				{
 					// Start Ball Reaping! We only get 2 refills so make them count!
 					compCollectFwd();
-					// initialize launcher speed variable to the same value used in compCollectFwd
-					launcherMotorSpeed = LAUNCHER_SPEED_FAR;
+
 					startTimeSecs = secCount;
 					compState = COMP_COLLECT_DRV_FWD;
 				}
@@ -109,14 +110,6 @@ void compRightExec()
 				{
 					stop();
 					delayMs(2000);
-
-					// ramp launcher speed down as you get closer to the goal
-					launcherMotorSpeed -= 7;
-					// ensure that we keep a minimum launcher speed.
-					if (launcherMotorSpeed < LAUNCHER_SPEED_NEAR)
-						launcherMotorSpeed = LAUNCHER_SPEED_NEAR;
-
-					launcherSpeed(launcherMotorSpeed);
 
 					resetEncoders();
 				}
@@ -143,8 +136,7 @@ void compRightExec()
 			}
 			else
 			{
-				pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL - 2);
-				//hugWallBackwards();
+				hugWallBackwards();
 			}
 			break;
 

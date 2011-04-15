@@ -9,7 +9,7 @@
 //setbaud.h will #define USE_2X as 1 if the desired baud rate tolerance could only be achieved by setting the U2X bit in the UART configuration.
 
 //settings for UART0
-#define BAUD0     57600
+#define BAUD0     38400
 #define BAUD_TOL0 2
 
 //settings for UART1
@@ -155,6 +155,25 @@ void uart0Transmit(u08 data)
 		while(!(UCSR0A & (1<<UDRE0)));
 		// put data into buffer, which sends the data
 		UDR0 = data;
+	#else
+		#error Failed to detect which serial registers your chip uses.
+	#endif
+}
+
+// Simple UART transmit function from ATmega datasheet
+// More sophisticated way is to use the TX Complete interrupt - USART_TXC_vect/USART0_TX_vect
+void uart1Transmit(u08 data)
+{
+	#if defined (UCSRA)
+		// Wait for empty transmit buffer
+		while(!(UCSRA & (1<<UDRE)));
+		// put data into buffer, which sends the data
+		UDR = data;
+	#elif defined (UCSR1A)
+		// Wait for empty transmit buffer
+		while(!(UCSR1A & (1<<UDRE1)));
+		// put data into buffer, which sends the data
+		UDR1 = data;
 	#else
 		#error Failed to detect which serial registers your chip uses.
 	#endif

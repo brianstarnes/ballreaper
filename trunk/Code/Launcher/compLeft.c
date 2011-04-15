@@ -15,10 +15,12 @@
 
 static int compState;
 static u08 refills = 0;
-static u08 launcherMotorSpeed;
+//static u08 launcherMotorSpeed;
 static u08 startTimeSecs;
 
+
 enum {
+	COMP_LAUNCHER_SPINUP,
 	COMP_COLLECT_DRV_FWD,
 	COMP_COLLECT_DRV_BACK,
 	COMP_DONE
@@ -28,19 +30,24 @@ void compLeftInit()
 {
 	rtcRestart();
 
-	configPacketProcessor(&validateLauncherPacket, &execLauncherPacket, LAST_UplinkPacketType - 1);
-
-	resetEncoders();
-	compCollectFwd();
 	startTimeSecs = secCount;
-	compState = COMP_COLLECT_DRV_FWD;
+	compState = COMP_LAUNCHER_SPINUP;
 }
 
 void compLeftExec()
 {
 	switch (compState) {
+		case COMP_LAUNCHER_SPINUP:
+			if ((secCount - startTimeSecs) > 2) {
+				resetEncoders();
+				compCollectFwd();
+
+				compState = COMP_COLLECT_DRV_FWD;
+			}
+			break;
+
 		case COMP_COLLECT_DRV_FWD:
-			if (LFRONT_HIT || (secCount - startTimeSecs) > 18)
+			if (LFRONT_HIT /*|| (secCount - startTimeSecs) > 18*/)
 			{
 				compCollectBack();
 				startTimeSecs = secCount;
@@ -56,22 +63,13 @@ void compLeftExec()
 				{
 					stop();
 					delayMs(2000);
-
-					// ramp launcher speed down as you get closer to the goal
-					launcherMotorSpeed -= 7;
-					// ensure that we keep a minimum launcher speed.
-					if (launcherMotorSpeed < LAUNCHER_SPEED_NEAR)
-						launcherMotorSpeed = LAUNCHER_SPEED_NEAR;
-
-					launcherSpeed(launcherMotorSpeed);
-
 					resetEncoders();
 				}
 			}
 			break;
 
 		case COMP_COLLECT_DRV_BACK:
-			if (LBACK_HIT || (secCount - startTimeSecs) > 6)
+			if (LBACK_HIT /*|| (secCount - startTimeSecs) > 6*/)
 			{
 				refills++;
 				stop();
