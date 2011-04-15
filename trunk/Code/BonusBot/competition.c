@@ -2,22 +2,14 @@
 
 #include "ADC.h"
 #include "bonusbot.h"
-#include "debug.h"
-#include "launcherPackets.h"
 #include "LCD.h"
 #include "motors.h"
-#include "packetprotocol.h"
 #include "rtc.h"
 #include "serial.h"
 #include "servos.h"
 #include "util.h"
 #include "utility.h"
 
-enum direction
-{
-	FORWARD,
-	REVERSE
-};
 
 //Local prototypes
 void frontLeft(u08 speed, u08 direction);
@@ -26,15 +18,23 @@ void backRight(u08 speed, u08 direction);
 void backLeft(u08 speed, u08 direction);
 
 static int compState;
-//static u08 launcherMotorSpeed;
 static u08 startTimeSecs;
+
+
+enum direction
+{
+	FORWARD,
+	REVERSE
+};
 
 enum {
 	COMP_DRV_TO_WALL,
-	COMP_RIGHT_APPROACH,
-	COMP_LEFT_APPROACH,
 	COMP_SLIDE_RIGHT_TO_LINE,
 	COMP_GRAB_BONUS_BALL,
+	COMP_DRV_BACK,
+	COMP_STRAFE_RIGHT,
+	COMP_STRAFE_LEFT,
+	COMP_SHOOT_BALL,
 	COMP_DONE
 };
 
@@ -46,12 +46,36 @@ void compInit()
 }
 
 void frontLeft(u08 speed, u08 direction)
+{
+	if (direction)
+		servo(SERVO_FRONT_LEFT, speed);
+	else
+		servo(SERVO_FRONT_LEFT, -speed);
+}
 
 void frontRight(u08 speed, u08 direction)
+{
+	if (direction)
+		servo(SERVO_FRONT_RIGHT, speed);
+	else
+		servo(SERVO_FRONT_RIGHT, -speed);
+}
 
 void backRight(u08 speed, u08 direction)
+{
+	if (direction)
+		servo(SERVO_BACK_RIGHT, speed);
+	else
+		servo(SERVO_BACK_RIGHT, -speed);
+}
 
 void backLeft(u08 speed, u08 direction)
+{
+	if (direction)
+		servo(SERVO_BACK_LEFT, speed);
+	else
+		servo(SERVO_BACK_LEFT, -speed);
+}
 
 
 void compExec()
@@ -64,72 +88,40 @@ void compExec()
 			if (leftHit && rightHit)
 			{
 				//hit wall, so next we go right
-				compState =
+				compState = COMP_SLIDE_RIGHT_TO_LINE;
 			}
 			else if (leftHit)
 			{
-				frontLeft(0);
-				backLeft(0);
-				backRight(DRIVE_SLOW_SPEED);
-				frontRight(DRIVE_SLOW_SPEED);
+				frontLeft(DRIVE_STOP, TRUE);
+				backLeft(DRIVE_STOP, TRUE);
+				backRight(DRIVE_SLOW_SPEED, TRUE);
+				frontRight(DRIVE_SLOW_SPEED, TRUE);
 			}
 			else if (rightHit)
-
-
-			if (LFRONT_HIT || (secCount - startTimeSecs) > 18)
 			{
-				compCollectBack();
-				startTimeSecs = secCount;
-				compState = COMP_COLLECT_DRV_BACK;
-			}
-			else {
-				/* Pause every couple ticks to give the feeder and shooter time to get rid
-				 * of the balls we just collected so that we don't drop any.
-				 */
-				if (innerEncoderTicks < 30 || wallEncoderTicks < 30)
-				  hugWallForwards();
-				else
-				{
-					stop();
-					delayMs(2000);
-
-					// ramp launcher speed down as you get closer to the goal
-					//launcherMotorSpeed -= 7;
-					// ensure that we keep a minimum launcher speed.
-					//if (launcherMotorSpeed < LAUNCHER_SPEED_NEAR)
-						//launcherMotorSpeed = LAUNCHER_SPEED_NEAR;
-
-					//launcherSpeed(launcherMotorSpeed);
-
-					resetEncoders();
-				}
+				frontLeft(DRIVE_SLOW_SPEED, TRUE);
+				backLeft(DRIVE_SLOW_SPEED, TRUE);
+				backRight(DRIVE_STOP, TRUE);
+				frontRight(DRIVE_STOP, TRUE);
 			}
 			break;
 
-		case COMP_COLLECT_DRV_BACK:
-			if (LBACK_HIT || (secCount - startTimeSecs) > 6)
-			{
-				refills++;
-				stop();
-				clearScreen();
-				printString_P(PSTR("Waiting 4 reload"));
-				delayMs(15000);
-				if (refills == 6)
-				{
-					compDone();
-					compState = COMP_DONE;
-				}
-				else
-				{
-					compCollectFwd();
-					startTimeSecs = secCount;
-					compState = COMP_DRV_FWD;
-				}
-			}
-			else
-			{
-				hugWallBackwards();
-			}
+		case COMP_SLIDE_RIGHT_TO_LINE:
+			break;
+
+		case COMP_GRAB_BONUS_BALL:
+			break;
+
+		case COMP_DRV_BACK:
+			break;
+
+		case COMP_STRAFE_RIGHT:
+			break;
+
+		case COMP_STRAFE_LEFT:
+			break;
+
+		case COMP_SHOOT_BALL:
 			break;
 
 		case COMP_DONE:

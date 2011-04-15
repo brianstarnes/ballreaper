@@ -28,40 +28,50 @@
 enum servos
 {
 	SERVO_FRONT_LEFT,
+	SERVO_BACK_LEFT,
 	SERVO_FRONT_RIGHT,
 	SERVO_BACK_RIGHT,
-	SERVO_BACK_LEFT,
-	SERVO_LEFT_LAUNCHER,
-	SERVO_RIGHT_LAUNCHER
+	SERVO_RELAY,
+};
+
+enum motors
+{
+	LAUNCHER_RIGHT,
+	LAUNCHER_LEFT
 };
 
 enum servoPositions
 {
-	LAUNCHER_GRAB_SPEED = 100,   //!< The speed to reverse the launcher wheels at to grab the bonus ball.
+	LAUNCHER_GRAB_SPEED   = 100,   //!< The speed to reverse the launcher wheels at to grab the bonus ball.
 	LAUNCHER_LAUNCH_SPEED = 160, //!< The speed to spin the launcher wheels at, when farthest away from the goal.
+	LAUNCHER_STOP         = 128
 };
 
 typedef enum
 {
-	SWITCH_LEFT  = 2,
-	SWITCH_RIGHT = 3
+	SWITCH_LEFT   = 2,
+	SWITCH_RIGHT  = 3,
+	SWITCH_SCROLL = 8
 } switch_t;
 
 // QDB-1114 reflective sensor analog inputs.
 typedef enum
 {
-	ANALOG_FRONT_LEFT = 0,
+	ANALOG_FRONT_LEFT  = 0,
 	ANALOG_FRONT_RIGHT = 1,
-	ANALOG_BACK_RIGHT = 2,
-	ANALOG_BACK_LEFT = 3
+	ANALOG_BACK_RIGHT  = 2,
+	ANALOG_BACK_LEFT   = 3
 } analog_t;
 
 enum motorSpeeds
 {
-	DRIVE_FAST_SPEED = 128,
-	DRIVE_SLOW_SPEED = 50
+	DRIVE_STOP       = 128,
+	DRIVE_SLOW_SPEED = 200,
+	DRIVE_FAST_SPEED = 254
+
 };
 
+extern volatile u08 encoderUpdated;
 extern volatile u16 qrdFrontLeftReading;
 extern volatile u16 qrdFrontRightReading;
 extern volatile u16 qrdBackRightReading;

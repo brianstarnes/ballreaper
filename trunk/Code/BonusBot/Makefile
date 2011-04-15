@@ -1,7 +1,6 @@
 # Enter the name of your main .c file here, without the .c extension. Avoid spaces or else surround the name with double quotes.
 PROJECTNAME = bonusbot
 
-
 # Enter the name of the folder that contains the XiphosLibrary files.
 # . means same folder, .. means parent folder, otherwise give a subfolder name like XiphosLibrary or a relative path like ../XiphosLibrary
 LIB = ../XiphosLibrary
@@ -19,10 +18,6 @@ USE_I2C    = 0
 # Specify any additional .c source files containing your program code.
 FILES = \
   competition.c \
-  debug.c \
-  launcherPackets.c \
-  packetprotocol.c \
-  remoteControl.c \
   rtc.c \
   serial.c \
   testmode.c \

@@ -1,12 +1,8 @@
 #include "ADC.h"
 #include "bonusbot.h"
 #include "competition.h"
-#include "debug.h"
-#include "launcherPackets.h"
 #include "LCD.h"
 #include "motors.h"
-#include "packetprotocol.h"
-#include "remoteControl.h"
 #include "rtc.h"
 #include "serial.h"
 #include "servos.h"
@@ -22,6 +18,7 @@ volatile u16 qrdBackRightReading;
 volatile u16 qrdBackLeftReading;
 volatile s16 error;
 volatile s16 totalError;
+volatile u08 encoderUpdated;
 volatile bool pause = FALSE;
 
 //Local prototypes
@@ -39,7 +36,7 @@ int main()
 	ADCSRA |= _BV(ADIE);
 
 	//set ADC right shifting (for 10-bit ADC reading), and select first ADC pin to read
-	ADMUX = _BV(REFS0) | ANALOG_WHEEL_ENCODER_INNER;
+	ADMUX = _BV(REFS0) | ANALOG_FRONT_LEFT;
 
 	//enable interrupts
 	sei();
@@ -62,7 +59,7 @@ int main()
 	ADCSRA |= _BV(ADSC);
 
 	//Make sure launcher is off
-	launcherSpeed(LAUNCHER_SPEED_STOPPED);
+	launcherSpeed(LAUNCHER_STOP);
 
 	mainMenu();
 }
@@ -121,7 +118,6 @@ static void mainMenu()
 					break;
 				default:
 					printString_P(PSTR("invalid choice"));
-					SOFTWARE_FAULT(PSTR("invalid choice"), choice, 0);
 					break;
 			}
 		}
@@ -134,6 +130,7 @@ static void mainMenu()
 	//run the chosen mode
 	switch (choice)
 	{
+		default:
 		case Option_RunCompetition:
 			pProgInit = compInit;
 			pProgExec = compExec;
@@ -142,13 +139,6 @@ static void mainMenu()
 			pProgInit = testModeInit;
 			pProgExec = testModeExec;
 			break;
-		case Option_RunRemoteSystem:
-			pProgInit = remoteSystemInit;
-			pProgExec = remoteSystemExec;
-			break;
-		default:
-			SOFTWARE_FAULT(PSTR("invalid choice"), choice, 0);
-			break;
 	}
 
 	pProgInit();
@@ -156,8 +146,7 @@ static void mainMenu()
 	while (1)
 	{
 		pProgExec();
-
-		pidExec();
+		launcherExec();
 	}
 }
 
