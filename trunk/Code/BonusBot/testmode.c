@@ -13,6 +13,7 @@
 //! Test Mode pages.
 enum {
 	TEST_Switches,
+	TEST_EncoderReadings,
 	TEST_DriveMotors,
 	NUM_Tests
 };
@@ -40,6 +41,8 @@ void testModeExec()
 			case TEST_Switches:
 				printString_P(PSTR("SW:FL   FR"));
 				break;
+			case TEST_EncoderReadings:
+				break;
 
 			case TEST_DriveMotors:
 				printString_P(PSTR("Test All Motors"));
@@ -59,6 +62,15 @@ void testModeExec()
 					printChar(digitalInput(SWITCH_LEFT) + '0');
 					lcdCursor(1, 6);
 					printChar(digitalInput(SWITCH_RIGHT) + '0');
+					break;
+				case TEST_EncoderReadings:
+					print_u16(qrdFrontLeftReading);
+					printChar(' ');
+					print_u16(qrdFrontRightReading);
+					lowerLine();
+					print_u16(qrdBackLeftReading);
+					printChar(' ');
+					print_u16(qrdFrontRightReading);
 					break;
 				case TEST_DriveMotors:
 					servo(SERVO_FRONT_RIGHT, DRIVE_SLOW_SPEED);
