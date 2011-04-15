@@ -19,6 +19,8 @@ void backLeft(u08 speed, u08 direction);
 void stopMotors();
 void strafeRight(u08 speed);
 void strafeLeft(u08 speed);
+void driveForward(void);
+void driveBackwards(void);
 
 static int compState;
 static u08 startTimeSecs;
@@ -46,6 +48,8 @@ void compInit()
 {
 	rtcRestart();
 	startTimeSecs = secCount;
+	driveForward();
+	printString_P(PSTR("Drive Forward"));
 	compState = COMP_DRV_TO_WALL;
 }
 
@@ -79,6 +83,14 @@ void backLeft(u08 speed, u08 direction)
 		servo(SERVO_BACK_LEFT, speed);
 	else
 		servo(SERVO_BACK_LEFT, -speed);
+}
+
+void driveForward(void)
+{
+	frontLeft(DRIVE_FAST_SPEED, FORWARD);
+	backLeft(DRIVE_FAST_SPEED, FORWARD);
+	backRight(DRIVE_FAST_SPEED, FORWARD);
+	frontRight(DRIVE_FAST_SPEED, FORWARD);
 }
 
 void driveBackwards(void)
