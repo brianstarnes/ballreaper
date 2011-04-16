@@ -20,6 +20,7 @@ static u08 startTimeSecs;
 
 
 enum {
+	COMP_WAIT_START,
 	COMP_LAUNCHER_SPINUP,
 	COMP_COLLECT_DRV_FWD,
 	COMP_EMPTY_HOPPER,
@@ -32,12 +33,24 @@ void compLeftInit()
 	rtcRestart();
 
 	startTimeSecs = secCount;
-	compState = COMP_LAUNCHER_SPINUP;
+	compState = COMP_WAIT_START;
 }
 
 void compLeftExec()
 {
+	filterDigitalInput(&dBackRight, SWITCH_BACK_WALL_RIGHT);
+	filterDigitalInput(&dFront, SWITCH_FRONT_WALL);
+	filterDigitalInput(&dSide, SWITCH_PIVOT);
+
 	switch (compState) {
+	case COMP_WAIT_START:
+		if (!PRESSED(dSide))
+		{
+			startTimeSecs = secCount;
+			compState = COMP_LAUNCHER_SPINUP;
+		}
+		break;
+
 		case COMP_LAUNCHER_SPINUP:
 			if ((secCount - startTimeSecs) > 2) {
 				resetEncoders();
@@ -49,17 +62,18 @@ void compLeftExec()
 			break;
 
 		case COMP_COLLECT_DRV_FWD:
-			if (LFRONT_HIT || (secCount - startTimeSecs) > 25)
+			if (PRESSED(dFront) || (secCount - startTimeSecs) > 35)
 			{
 				compEmptyHopper();
 				startTimeSecs = secCount;
 				compState = COMP_EMPTY_HOPPER;
 			}
-			else {
+			else
+			{
 				/* Pause every couple ticks to give the feeder and shooter time to get rid
 				 * of the balls we just collected so that we don't drop any.
 				 */
-				if (innerEncoderTicks < 30 || wallEncoderTicks < 30)
+				if (innerEncoderTicks < 15 || wallEncoderTicks < 15)
 				  hugWallForwards();
 				else
 				{
@@ -80,7 +94,7 @@ void compLeftExec()
 			break;
 
 		case COMP_COLLECT_DRV_BACK:
-			if (LBACK_HIT || (secCount - startTimeSecs) > 20)
+			if (PRESSED(dBackRight) || (secCount - startTimeSecs) > 10)
 			{
 				refills++;
 				stop();

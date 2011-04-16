@@ -21,6 +21,14 @@ u08 pidStop = TRUE;
 static s16 curLauncherSpeed = 128;
 static s16 requestedLauncherSpeed = 128;
 
+//digital input states
+u08 dBackLeft;
+u08 dBackRight;
+u08 dRearSide;
+u08 dFrontSide;
+u08 dFront;
+u08 dSide = DIGITAL_FILTER_CYCLES;
+
 #define LAUNCHER_SPEED_STEP 1
 
 #define LIMIT(v, min, max) (((v) < (min)) ? (min) : (((v) > (max)) ? (max) : (v)))
@@ -392,4 +400,22 @@ u16 convertToBatteryVoltage(u16 reading)
 	u32 readingMillivolts = (u32)reading * AREF_VOLTAGE * 1000 / NUM_ADC10_VALUES;
 	u16 batteryMillivolts = (u16)(readingMillivolts * (RESISTOR_BATTERY_LOWER + RESISTOR_BATTERY_UPPER) / RESISTOR_BATTERY_LOWER);
 	return batteryMillivolts;
+}
+
+void filterDigitalInput(u08 *readCount, u08 inputNum)
+{
+	u08 switchHit = !digitalInput(inputNum);
+
+	if (switchHit)
+	{
+		if (*readCount < DIGITAL_FILTER_CYCLES)
+			(*readCount)++;
+		else
+			*readCount = DIGITAL_FILTER_CYCLES;
+	}
+	else
+	{
+		if (*readCount > 0)
+			(*readCount)--;
+	}
 }

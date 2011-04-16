@@ -50,16 +50,12 @@
 #define BACK_LEFT_HIT       !digitalInput(SWITCH_BACK_WALL_LEFT)
 #define PIVOT_HIT           !digitalInput(SWITCH_PIVOT)
 
-// Left robot switches
-#define LREAR_SIDE_WALL_HIT  !digitalInput(LSWITCH_SIDE_WALL_REAR)
-#define LFRONT_SIDE_WALL_HIT !digitalInput(LSWITCH_SIDE_WALL_FRONT)
-#define LFRONT_HIT           !digitalInput(LSWITCH_FRONT)
-#define LBACK_HIT            !digitalInput(LSWITCH_BACK)
+// Number of cycles to assert a digital input
+#define DIGITAL_FILTER_CYCLES 10
 
-// Robot ID input
-#define LEFT_ROBOT_ID        !digitalInput(SWITCH_ROBOT_ID)
+#define PRESSED(digitalCount) (digitalCount == DIGITAL_FILTER_CYCLES)
 
-//Back wall length in ticks
+// Back wall length in ticks
 #define BACK_WALL_TICK_LEN   330
 
 enum servos
@@ -72,17 +68,17 @@ enum servos
 
 enum servoPositions
 {
-	RSCRAPER_DOWN          = 6, //!< The final position to lower the right scraper arm to to collect balls.
+	RSCRAPER_DOWN          = 3, //!< The final position to lower the right scraper arm to to collect balls.
 	RSCRAPER_MOSTLY_DOWN   = 10, //!< The initial position to lower the right scraper arm to to avoid whacking the trough.
 	RSCRAPER_UP            = 134, //!< The raised position for the right scraper arm.
 	LSCRAPER_DOWN          = 128, //!< The final position to lower the left scraper arm to to collect balls.
 	LSCRAPER_MOSTLY_DOWN   = 127, //!< The initial position to lower the left scraper arm to to avoid whacking the trough.
 	LSCRAPER_UP            = 6, //!< The raised position for the left scraper arm.
 	FEEDER_STOPPED         = 128,
-	FEEDER_RUNNING         = 200,
+	FEEDER_RUNNING         = 180,
 	LAUNCHER_SPEED_STOPPED = 128, //!< The center servo setting that the RoboClaw interprets as stopped.
 	LAUNCHER_SPEED_NEAR    = 150, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
-	LAUNCHER_SPEED_FAR     = 155,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
+	LAUNCHER_SPEED_FAR     = 165,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
 };
 
 typedef enum

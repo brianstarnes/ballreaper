@@ -42,6 +42,12 @@ void compRightInit()
 
 void compRightExec()
 {
+	filterDigitalInput(&dBackLeft, SWITCH_BACK_WALL_LEFT);
+	filterDigitalInput(&dBackRight, SWITCH_BACK_WALL_RIGHT);
+	filterDigitalInput(&dRearSide, SWITCH_SIDE_WALL_REAR);
+	filterDigitalInput(&dFrontSide, SWITCH_SIDE_WALL_FRONT);
+	filterDigitalInput(&dFront, SWITCH_FRONT_WALL);
+
 	switch (compState) {
 		case COMP_DRIVE_FORWARD:
 		{
@@ -65,11 +71,12 @@ void compRightExec()
 			hugWallStrafe((u08)(SLOW_SPEED_WALL_WHEEL + adjustWall), (u08)(SLOW_SPEED_INNER_WHEEL + adjustInner));
 
 			//drive until either side wall switches hit
-			if (REAR_SIDE_WALL_HIT || FRONT_SIDE_WALL_HIT)
+			if (PRESSED(dRearSide) || PRESSED(dFrontSide))
 			{
 				delayMs(500);
 				//pidStop = TRUE;
 				compTurnLeft();
+				startTimeSecs = secCount;
 				compState = COMP_TURN_LEFT;
 			}
 			break;
@@ -80,9 +87,7 @@ void compRightExec()
 			if (PIVOT_HIT)
 			{
 				//Drive backwards into wall until back right switch hits
-				if (!BACK_RIGHT_HIT)
-					driveForward(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
-				else
+				if (PRESSED(dBackRight) || (secCount - startTimeSecs) > 3)
 				{
 					// Start Ball Reaping! We only get 2 refills so make them count!
 					compCollectFwd();
@@ -90,11 +95,15 @@ void compRightExec()
 					startTimeSecs = secCount;
 					compState = COMP_COLLECT_DRV_FWD;
 				}
+				else
+				{
+					driveForward(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL);
+				}
 			}
 			break;
 
 		case COMP_COLLECT_DRV_FWD:
-			if (FRONT_HIT || (secCount - startTimeSecs) > 25)
+			if (PRESSED(dFront) || (secCount - startTimeSecs) > 35)
 			{
 				compEmptyHopper();
 				startTimeSecs = secCount;
@@ -105,8 +114,8 @@ void compRightExec()
 				/* Pause every couple ticks to give the feeder and shooter time to get rid
 				 * of the balls we just collected so that we don't drop any.
 				 */
-				if (innerEncoderTicks < 40 || wallEncoderTicks < 40)
-				  hugWallForwards();
+				if (innerEncoderTicks < 25 || wallEncoderTicks < 25)
+					hugWallForwards();
 				else
 				{
 					stop();
@@ -127,7 +136,7 @@ void compRightExec()
 			break;
 
 		case COMP_COLLECT_DRV_BACK:
-			if (BACK_RIGHT_HIT || BACK_LEFT_HIT || (secCount - startTimeSecs) > 20)
+			if (PRESSED(dBackRight) || PRESSED(dBackLeft) || (secCount - startTimeSecs) > 10)
 			{
 				stop();
 				refills++;

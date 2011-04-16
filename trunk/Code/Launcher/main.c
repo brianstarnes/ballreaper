@@ -65,7 +65,7 @@ int main()
 	analogPullups(0xFF);
 
 	//read and save RobotID
-	if (LEFT_ROBOT_ID)
+	if (!digitalInput(SWITCH_ROBOT_ID))
 		robotID = LEFT_ROBOT;
 	else
 		robotID = RIGHT_ROBOT;

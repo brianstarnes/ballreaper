@@ -9,6 +9,8 @@ void driveForward(s08 wallSpeed, s08 innerSpeed);
 void turnLeft();
 void turnRight();
 void stop();
+void launcherSpeed(u08 speed);
+void launcherExec();
 void scraperDown();
 void scraperUp();
 void feederOn();
@@ -25,8 +27,14 @@ void hugWallBackwards();
 void hugWallStrafe(u08 wallSpeed, u08 innerSpeed);
 void victoryDance();
 u16 convertToBatteryVoltage(u16 reading);
+void filterDigitalInput(u08 *readCount, u08 inputNum);
 
-void launcherSpeed(u08 speed);
-void launcherExec();
+// globals
+extern u08 dBackLeft;
+extern u08 dBackRight;
+extern u08 dRearSide;
+extern u08 dFrontSide;
+extern u08 dFront;
+extern u08 dSide;
 
 #endif
