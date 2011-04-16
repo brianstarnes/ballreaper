@@ -85,8 +85,6 @@ void compCollectBack()
 {
 	i = j = 0;
 
-	stop();
-	scraperUp();
 	feederOff();
 	launcherSpeed(LAUNCHER_SPEED_STOPPED);
 	delayMs(500);
@@ -94,6 +92,15 @@ void compCollectBack()
 	// Start driving backwards to get a refill
 	clearScreen();
     printString_P(PSTR("Drive backwards"));
+}
+
+void compEmptyHopper()
+{
+	stop();
+	scraperUp();
+
+	clearScreen();
+    printString_P(PSTR("Empty hopper"));
 }
 
 void hugWallForwards()
@@ -105,6 +112,10 @@ void hugWallForwards()
 		//lost the wall, turn back into the wall
 		pidStop = TRUE;
 		driveForward(SLOW_SPEED_WALL_WHEEL - 3, SLOW_SPEED_INNER_WHEEL + 5);
+	}
+	else if (!LEFT_ROBOT_ID && !PIVOT_HIT)
+	{
+		turnLeft();
 	}
 	else if (!FRONT_SIDE_WALL_HIT)
 	{

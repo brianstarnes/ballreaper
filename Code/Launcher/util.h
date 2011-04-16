@@ -17,6 +17,7 @@ void haltRobot();
 void resetEncoders();
 void calibrate(int ticksPerSec, s08* wallMotorSpeed, s08* innerMotorSpeed);
 void compCollectFwd();
+void compEmptyHopper();
 void compCollectBack();
 void compDone();
 void hugWallForwards();

@@ -29,10 +29,10 @@
 
 enum servos
 {
-	SERVO_FRONT_LEFT,
 	SERVO_BACK_LEFT,
-	SERVO_FRONT_RIGHT,
+	SERVO_FRONT_LEFT,
 	SERVO_BACK_RIGHT,
+	SERVO_FRONT_RIGHT,
 	SERVO_RELAY,
 };
 
@@ -45,7 +45,7 @@ enum motors
 enum servoPositions
 {
 	LAUNCHER_GRAB_SPEED   = 160,   //!< The speed to reverse the launcher wheels at to grab the bonus ball.
-	LAUNCHER_LAUNCH_SPEED = 0, //!< The speed to spin the launcher wheels at, when farthest away from the goal.
+	LAUNCHER_LAUNCH_SPEED = 25, //!< The speed to spin the launcher wheels at, when farthest away from the goal.
 	LAUNCHER_STOP         = 127
 };
 
@@ -68,8 +68,8 @@ typedef enum
 enum motorSpeeds
 {
 	DRIVE_STOP       = 0,
-	DRIVE_SLOW_SPEED = 60,
-	DRIVE_FAST_SPEED = 100
+	DRIVE_SLOW_SPEED = 25,
+	DRIVE_FAST_SPEED = 75
 };
 
 extern volatile u08 encoderUpdated;

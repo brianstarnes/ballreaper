@@ -73,7 +73,7 @@ void compExec()
 			strafeRight(DRIVE_FAST_SPEED);
 
 			// TODO base this off of line sensors...
-			if ((secCount - startTimeSecs) > 2)
+			if ((secCount - startTimeSecs) > 10)
 			{
 				compGrabBonusBall();
 				compState = COMP_GRAB_BONUS_BALL;
@@ -119,7 +119,7 @@ void compExec()
 			break;
 
 		case COMP_STRAFE_RIGHT:
-			strafeRight(DRIVE_SLOW_SPEED);
+			strafeRight(DRIVE_FAST_SPEED);
 
 			//TODO: Strafe until both back sensors are off the line and go back the other way...
 			// once time is low setup money shot.
@@ -141,7 +141,7 @@ void compExec()
 			break;
 
 		case COMP_STRAFE_LEFT:
-			strafeLeft(DRIVE_SLOW_SPEED);
+			strafeLeft(DRIVE_FAST_SPEED);
 
 			//TODO: Strafe until sensors cross black line and go off and go back the other way...
 			// once time is low setup money shot.
