@@ -113,7 +113,7 @@ void hugWallForwards()
 		pidStop = TRUE;
 		driveForward(SLOW_SPEED_WALL_WHEEL - 3, SLOW_SPEED_INNER_WHEEL + 5);
 	}
-	else if (!LEFT_ROBOT_ID && !PIVOT_HIT)
+	else if (robotID == RIGHT_ROBOT && !PIVOT_HIT)
 	{
 		turnLeft();
 	}
@@ -286,7 +286,7 @@ void launcherExec()
 
 void scraperDown()
 {
-	if (LEFT_ROBOT_ID)
+	if (robotID == LEFT_ROBOT)
 	{
 		servo(SERVO_SCRAPER, LSCRAPER_MOSTLY_DOWN);
 		delayMs(400);
@@ -302,7 +302,7 @@ void scraperDown()
 
 void scraperUp()
 {
-	if (LEFT_ROBOT_ID)
+	if (robotID == LEFT_ROBOT)
 		servo(SERVO_SCRAPER, LSCRAPER_UP);
 	else
 		servo(SERVO_SCRAPER, RSCRAPER_UP);

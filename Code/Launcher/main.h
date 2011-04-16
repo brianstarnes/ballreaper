@@ -137,15 +137,18 @@ enum motorSpeeds
 	TURN_SPEED_WALL_WHEEL     = 45
 };
 
-//RobotID
+//RobotID values
 enum {
-	ROBOTID_LEFT,
-	ROBOTID_RIGHT
+	LEFT_ROBOT,
+	RIGHT_ROBOT
 };
 
 //Prototypes
 void pauseCompetition();
 void resumeCompetition();
+
+//globals
+extern u08 robotID;
 
 extern volatile u16 innerEncoderTicks;
 extern volatile u16 totalInnerEncoderTicks;
