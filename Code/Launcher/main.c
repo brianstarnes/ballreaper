@@ -170,7 +170,7 @@ static void mainMenu()
 	pProgInit();
 
 
-	u32 priorMs = 0xFF;
+	u32 priorSeconds = 255;
 	while (1)
 	{
 		pProgExec();
@@ -182,11 +182,10 @@ static void mainMenu()
 		u08 seconds = msCount / 1000;
 
 		// only print when the seconds have changed
-		if (msCount != priorMs)
+		if (seconds != priorSeconds)
 		{
-			priorMs = msCount;
+			priorSeconds = seconds;
 			lcdCursor(0, 11);
-
 
 			// print minutes
 			printChar((seconds / 60) + '0');

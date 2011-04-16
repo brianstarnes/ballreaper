@@ -21,6 +21,7 @@ void compCollectBack();
 void compDone();
 void hugWallForwards();
 void hugWallBackwards();
+void hugWallStrafe(u08 wallSpeed, u08 innerSpeed);
 void victoryDance();
 u16 convertToBatteryVoltage(u16 reading);
 

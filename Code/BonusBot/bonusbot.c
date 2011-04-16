@@ -82,6 +82,8 @@ static void mainMenu()
 	void (*pProgInit)(void) = 0;
 	void (*pProgExec)(void) = 0;
 
+	stopMotors();
+
 	clearScreen();
 	printString_P(PSTR("Main Menu"));
 
@@ -146,7 +148,7 @@ static void mainMenu()
 	while (1)
 	{
 		pProgExec();
-		//launcherExec();
+		launcherExec();
 	}
 }
 

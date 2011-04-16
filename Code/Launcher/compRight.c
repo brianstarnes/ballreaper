@@ -15,12 +15,14 @@
 
 static void compStart();
 static void compTurnLeft();
+static void compWaitRefill();
 
 enum {
 	COMP_DRIVE_FORWARD,
 	COMP_TURN_LEFT,
 	COMP_COLLECT_DRV_FWD,
 	COMP_COLLECT_DRV_BACK,
+	COMP_WAIT_REFILL,
 	COMP_DONE
 };
 
@@ -47,27 +49,27 @@ void compRightExec()
 			s16 adjustWall;
 			s16 adjustInner;
 
-
-			adjustWall  = ((BACK_WALL_TICK_LEN - (s16)wallEncoderTicks)  * (FAST_SPEED_WALL_WHEEL -  SLOW_SPEED_WALL_WHEEL))  / BACK_WALL_TICK_LEN;
+			adjustWall  = ((BACK_WALL_TICK_LEN - (s16)wallEncoderTicks) * (FAST_SPEED_WALL_WHEEL - SLOW_SPEED_WALL_WHEEL)) / BACK_WALL_TICK_LEN;
 			adjustInner = ((BACK_WALL_TICK_LEN - (s16)innerEncoderTicks) * (FAST_SPEED_INNER_WHEEL - SLOW_SPEED_INNER_WHEEL)) / BACK_WALL_TICK_LEN;
 
 			if (adjustWall < 0)
 				adjustWall = 0;
-			else if (adjustWall > (FAST_SPEED_WALL_WHEEL -  SLOW_SPEED_WALL_WHEEL))
-				adjustWall = FAST_SPEED_WALL_WHEEL -  SLOW_SPEED_WALL_WHEEL;
+			else if (adjustWall > (FAST_SPEED_WALL_WHEEL - SLOW_SPEED_WALL_WHEEL))
+				adjustWall = FAST_SPEED_WALL_WHEEL - SLOW_SPEED_WALL_WHEEL;
 
 			if (adjustInner < 0)
 				adjustInner = 0;
-			else if (adjustInner > (FAST_SPEED_INNER_WHEEL -  SLOW_SPEED_INNER_WHEEL))
-				adjustInner = FAST_SPEED_INNER_WHEEL -  SLOW_SPEED_INNER_WHEEL;
+			else if (adjustInner > (FAST_SPEED_INNER_WHEEL - SLOW_SPEED_INNER_WHEEL))
+				adjustInner = FAST_SPEED_INNER_WHEEL - SLOW_SPEED_INNER_WHEEL;
 
-			pidDrive((u08)(SLOW_SPEED_WALL_WHEEL + adjustWall), (u08)(SLOW_SPEED_INNER_WHEEL + adjustInner));
+
+			hugWallStrafe((u08)(SLOW_SPEED_WALL_WHEEL + adjustWall), (u08)(SLOW_SPEED_INNER_WHEEL + adjustInner));
 
 			//drive until either side wall switches hit
 			if (REAR_SIDE_WALL_HIT || FRONT_SIDE_WALL_HIT)
 			{
 				delayMs(500);
-				pidStop = TRUE;
+				//pidStop = TRUE;
 				compTurnLeft();
 				compState = COMP_TURN_LEFT;
 			}
@@ -117,11 +119,10 @@ void compRightExec()
 			break;
 
 		case COMP_COLLECT_DRV_BACK:
-			if (BACK_RIGHT_HIT || BACK_LEFT_HIT || (secCount - startTimeSecs) > 6)
+			if (BACK_RIGHT_HIT || BACK_LEFT_HIT || (secCount - startTimeSecs) > 12)
 			{
-				refills++;
 				stop();
-				delayMs(15000);
+				refills++;
 				if (refills == 6)
 				{
 					compDone();
@@ -129,14 +130,24 @@ void compRightExec()
 				}
 				else
 				{
-					compCollectFwd();
+					compWaitRefill();
 					startTimeSecs = secCount;
-					compState = COMP_COLLECT_DRV_FWD;
+					compState = COMP_WAIT_REFILL;
 				}
 			}
 			else
 			{
 				hugWallBackwards();
+			}
+			break;
+
+		case COMP_WAIT_REFILL:
+			pidStop = TRUE;
+			if ((secCount - startTimeSecs) > 15)
+			{
+				compCollectFwd();
+				startTimeSecs = secCount;
+				compState = COMP_COLLECT_DRV_FWD;
 			}
 			break;
 
@@ -151,8 +162,7 @@ static void compStart()
 	clearScreen();
 	lowerLine();
 	printString_P(PSTR("Drive forward"));
-
-	pidDrive(FAST_SPEED_WALL_WHEEL, FAST_SPEED_INNER_WHEEL);
+	pidStop = TRUE;
 	resetEncoders();
 }
 
@@ -160,8 +170,16 @@ static void compTurnLeft()
 {
 	// Hit wall so turn left
 	clearScreen();
+	lowerLine();
 	printString_P(PSTR("Turn Left"));
 
     turnLeft();
+}
+
+static void compWaitRefill()
+{
+	clearScreen();
+	lowerLine();
+	printString_P(PSTR("Wait for refill"));
 }
 

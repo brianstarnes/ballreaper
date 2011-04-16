@@ -11,8 +11,8 @@
 
 #include <util/atomic.h>
 
-static u08 curLauncherSpeed = 0;
-static u08 requestedLauncherSpeed = 0;
+static u08 curLauncherSpeed = 127;
+static u08 requestedLauncherSpeed = 127;
 
 #define LAUNCHER_SPEED_STEP 12
 
@@ -62,18 +62,91 @@ void victoryDance()
 	haltRobot();
 }
 
+void frontLeft(u08 speed, u08 direction)
+{
+	if (direction)
+		servo(SERVO_FRONT_LEFT, 128 - speed);
+	else
+		servo(SERVO_FRONT_LEFT, 128 + speed);
+}
+
+void frontRight(u08 speed, u08 direction)
+{
+	if (direction)
+		servo(SERVO_FRONT_RIGHT, 128 - speed);
+	else
+		servo(SERVO_FRONT_RIGHT, 128 + speed);
+}
+
+void backRight(u08 speed, u08 direction)
+{
+	if (direction)
+		servo(SERVO_BACK_RIGHT, 128 - speed);
+	else
+		servo(SERVO_BACK_RIGHT, 128 + speed);
+}
+
+void backLeft(u08 speed, u08 direction)
+{
+	if (direction)
+		servo(SERVO_BACK_LEFT, 128 - speed);
+	else
+		servo(SERVO_BACK_LEFT, 128 + speed);
+}
+
+void driveForward(void)
+{
+	frontLeft(DRIVE_FAST_SPEED, FORWARD);
+	backLeft(DRIVE_FAST_SPEED, FORWARD);
+	backRight(DRIVE_FAST_SPEED, FORWARD);
+	frontRight(DRIVE_FAST_SPEED, FORWARD);
+}
+
+void driveBackwards(void)
+{
+	frontLeft(DRIVE_SLOW_SPEED, REVERSE);
+	backLeft(DRIVE_SLOW_SPEED, REVERSE);
+	backRight(DRIVE_SLOW_SPEED, REVERSE);
+	frontRight(DRIVE_SLOW_SPEED, REVERSE);
+}
+
+void strafeRight(u08 speed)
+{
+	frontLeft(speed, FORWARD);
+	backLeft(speed, REVERSE);
+	backRight(speed, FORWARD);
+	frontRight(speed, REVERSE);
+}
+
+void strafeLeft(u08 speed)
+{
+	frontLeft(speed, REVERSE);
+	backLeft(speed, FORWARD);
+	backRight(speed, REVERSE);
+	frontRight(speed, FORWARD);
+}
+
 void stopMotors()
 {
-	servo(SERVO_FRONT_RIGHT, DRIVE_STOP);
-    servo(SERVO_FRONT_LEFT,  DRIVE_STOP);
-	servo(SERVO_BACK_RIGHT,  DRIVE_STOP);
-	servo(SERVO_BACK_LEFT,   DRIVE_STOP);
+	frontLeft(0, FORWARD);
+	backLeft(0, FORWARD);
+	backRight(0, FORWARD);
+	frontRight(0, FORWARD);
+}
+
+void vacuumOn()
+{
+	servo(SERVO_RELAY, 255);
+}
+
+void vacuumOff()
+{
+	servo(SERVO_RELAY, 0);
 }
 
 void stopLauncher()
 {
-	motor0(LAUNCHER_STOP);
-	motor1(LAUNCHER_STOP);
+	launcherSpeed(LAUNCHER_STOP);
 }
 
 //! Sets the speed of the launcher motors: 128-255 for forward operation.
