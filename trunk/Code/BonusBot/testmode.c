@@ -13,8 +13,9 @@
 //! Test Mode pages.
 enum {
 	TEST_Switches,
-	TEST_EncoderReadings,
+	TEST_QrdReadings,
 	TEST_DriveMotors,
+	TEST_Launcher,
 	NUM_Tests
 };
 
@@ -41,11 +42,13 @@ void testModeExec()
 			case TEST_Switches:
 				printString_P(PSTR("SW:FL   FR"));
 				break;
-			case TEST_EncoderReadings:
+			case TEST_QrdReadings:
 				break;
-
 			case TEST_DriveMotors:
 				printString_P(PSTR("Test All Motors"));
+				break;
+			case TEST_Launcher:
+				printString_P(PSTR("Test Launcher"));
 				break;
 			default:
 				printString_P(PSTR("invalid testpage"));
@@ -63,14 +66,23 @@ void testModeExec()
 					lcdCursor(1, 6);
 					printChar(digitalInput(SWITCH_RIGHT) + '0');
 					break;
-				case TEST_EncoderReadings:
+				case TEST_QrdReadings:
+					upperLine();
+					printChar('F');
+					printChar('L');
 					print_u16(qrdFrontLeftReading);
 					printChar(' ');
+					printChar('F');
+					printChar('R');
 					print_u16(qrdFrontRightReading);
 					lowerLine();
+					printChar('B');
+					printChar('L');
 					print_u16(qrdBackLeftReading);
 					printChar(' ');
-					print_u16(qrdFrontRightReading);
+					printChar('B');
+					printChar('R');
+					print_u16(qrdBackRightReading);
 					break;
 				case TEST_DriveMotors:
 					servo(SERVO_FRONT_RIGHT, DRIVE_SLOW_SPEED);
@@ -78,6 +90,9 @@ void testModeExec()
 					servo(SERVO_BACK_RIGHT,  DRIVE_SLOW_SPEED);
 					servo(SERVO_BACK_LEFT,   DRIVE_SLOW_SPEED);
 					break;
+				case TEST_Launcher:
+					motor0(LAUNCHER_LAUNCH_SPEED);
+					motor1(LAUNCHER_LAUNCH_SPEED);
 				default:
 					printString_P(PSTR("invalid testpage"));
 					break;
