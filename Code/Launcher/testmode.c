@@ -20,6 +20,7 @@ enum {
 	TEST_EncoderTicks,
 	TEST_EncoderReadings,
 	TEST_DriveMotors,
+	TEST_Scraper,
 	NUM_Tests
 };
 
@@ -62,6 +63,9 @@ void testModeExec()
 				break;
 			case TEST_DriveMotors:
 				printString_P(PSTR("W pidDrive I"));
+				break;
+			case TEST_Scraper:
+				printString_P(PSTR("Scraper Test"));
 				break;
 			default:
 				printString_P(PSTR("invalid testpage"));
@@ -126,6 +130,9 @@ void testModeExec()
 					print_u16(wallEncoderTicks);
 					printChar(' ');
 					print_u16(innerEncoderTicks);
+					break;
+				case TEST_Scraper:
+					scraperDown();
 					break;
 				default:
 					printString_P(PSTR("invalid testpage"));

@@ -34,7 +34,7 @@ void compInit()
 	rtcRestart();
 	driveForward();
 	printString_P(PSTR("Drive Forward"));
-	compState = COMP_DRV_TO_WALL;
+	compState = COMP_SLIDE_RIGHT_TO_LINE;
 }
 
 void compExec()
@@ -73,7 +73,7 @@ void compExec()
 			strafeRight(DRIVE_FAST_SPEED);
 
 			// TODO base this off of line sensors...
-			if ((secCount - startTimeSecs) > 10)
+			if ((secCount - startTimeSecs) > 30)
 			{
 				compGrabBonusBall();
 				compState = COMP_GRAB_BONUS_BALL;

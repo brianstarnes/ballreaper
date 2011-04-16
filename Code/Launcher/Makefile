@@ -24,7 +24,7 @@ FILES = \
   launcherPackets.c \
   packetprotocol.c \
   remoteControl.c \
-  rtc.c \
+  rtcTimer.c \
   serial.c \
   testmode.c \
   util.c
