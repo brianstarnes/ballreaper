@@ -60,8 +60,8 @@ void rtcPause()
  */
 void rtcResume()
 {
-	//Set timer2 prescaler to 32, so the 8-bit timer2 will overflow exactly 4 times per second.
-	TCCR2B = _BV(CS21) | _BV(CS20);
+	//Set timer2 prescaler to 1, so the 8-bit timer2 will overflow exactly 128 times per second.
+	TCCR2B = _BV(CS20);
 
 	//Wait for TCCR2B to finish updating, to prevent user from writing again too soon
 	//and corrupting the register.
@@ -73,7 +73,7 @@ ISR(TIMER2_OVF_vect)
 {
 	//Increment the elapsed quarter-seconds.
 	tickCount++;
-	secCount = tickCount >> 2;
+	secCount = tickCount >> 7;
 }
 
 //
@@ -84,5 +84,5 @@ u32 getMsCount()
 	{
 		temp = tickCount;
 	}
-	return temp * 250;
+	return (u32)(temp * 1000.0 / 128);
 }

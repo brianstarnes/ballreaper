@@ -104,24 +104,15 @@ void hugWallForwards()
 		printString_P(PSTR("Lost"));
 		//lost the wall, turn back into the wall
 		pidStop = TRUE;
-		driveForward(SLOW_SPEED_WALL_WHEEL - 7, SLOW_SPEED_INNER_WHEEL + 10);
+		driveForward(SLOW_SPEED_WALL_WHEEL - 3, SLOW_SPEED_INNER_WHEEL + 5);
 	}
 	else if (!FRONT_SIDE_WALL_HIT)
 	{
 		printString_P(PSTR("into"));
 		//Turn into the wall
 		pidStop = TRUE;
-		driveForward(SLOW_SPEED_WALL_WHEEL - 7, SLOW_SPEED_INNER_WHEEL + 10);
+		driveForward(SLOW_SPEED_WALL_WHEEL - 3, SLOW_SPEED_INNER_WHEEL + 5);
 	}
-/*
-	else if (!REAR_SIDE_WALL_HIT)
-	{
-		printString_P(PSTR("away"));
-		//Turn away from the wall
-		pidStop = TRUE;
-		driveForward(SLOW_SPEED_WALL_WHEEL + 20, SLOW_SPEED_INNER_WHEEL);
-	}
-*/
 	else
 	{
 		printString_P(PSTR("strt"));
@@ -138,20 +129,51 @@ void hugWallBackwards()
 		printString_P(PSTR("Lost"));
 		//lost the wall, turn back into the wall
 		pidStop = TRUE;
-		driveForward(-SLOW_SPEED_WALL_WHEEL + 7, -SLOW_SPEED_INNER_WHEEL - 10);
+		driveForward(-SLOW_SPEED_BK_WALL_WHEEL + 7, -SLOW_SPEED_BK_INNER_WHEEL - 10);
 	}
 	else if (!REAR_SIDE_WALL_HIT)
 	{
 		printString_P(PSTR("into"));
 		//Turn into the wall
 		pidStop = TRUE;
-		driveForward(-SLOW_SPEED_WALL_WHEEL + 7, -SLOW_SPEED_INNER_WHEEL - 10);
+		driveForward(-SLOW_SPEED_BK_WALL_WHEEL + 7, -SLOW_SPEED_BK_INNER_WHEEL - 10);
 	}
 	else
 	{
 		printString_P(PSTR("strt"));
 		//Drive straight
-		pidDrive(-SLOW_SPEED_WALL_WHEEL, -SLOW_SPEED_INNER_WHEEL - 3);
+		pidDrive(-SLOW_SPEED_BK_WALL_WHEEL, -SLOW_SPEED_BK_INNER_WHEEL - 3);
+	}
+}
+
+void hugWallStrafe(u08 wallSpeed, u08 innerSpeed)
+{
+	lowerLine();
+	if (!BACK_LEFT_HIT && !BACK_RIGHT_HIT)
+	{
+		printString_P(PSTR("Lost"));
+		//lost the wall, turn back into the wall
+		pidStop = TRUE;
+		driveForward(wallSpeed - 3, innerSpeed + 5);
+	}
+	else if (!BACK_RIGHT_HIT)
+	{
+		printString_P(PSTR("away"));
+		//Turn into the wall
+		pidStop = TRUE;
+		driveForward(wallSpeed - 3, innerSpeed + 5);
+	}
+	else if (!BACK_LEFT_HIT)
+	{
+		printString_P(PSTR("into"));
+		//Drive straight
+		driveForward(wallSpeed, innerSpeed);
+	}
+	else
+	{
+		printString_P(PSTR("strt"));
+		//Drive straight
+		driveForward(wallSpeed, innerSpeed + 3);
 	}
 }
 
@@ -226,9 +248,11 @@ void launcherSpeed(u08 speed)
 void launcherExec()
 {
 	u32 curTime = getMsCount();
+	static u32 lastUpdateTime;
 
-	if ((curTime - lastUpdateTime) > 250)
+	if ((curTime - lastUpdateTime) > 20)
 	{
+		lastUpdateTime = curTime;
 		if (ABS(requestedLauncherSpeed - curLauncherSpeed) <= LAUNCHER_SPEED_STEP)
 			curLauncherSpeed = requestedLauncherSpeed;
 		else if (requestedLauncherSpeed > curLauncherSpeed)

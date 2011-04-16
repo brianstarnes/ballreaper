@@ -24,6 +24,8 @@
 // Bonus Bot switches
 #define BB_LEFT_HIT   !digitalInput(SWITCH_LEFT)
 #define BB_RIGHT_HIT  !digitalInput(SWITCH_RIGHT)
+#define BB_BACK_LEFT_HIT   !digitalInput(SWITCH_LEFT)
+#define BB_BACK_RIGHT_HIT  !digitalInput(SWITCH_RIGHT)
 
 enum servos
 {
@@ -42,9 +44,9 @@ enum motors
 
 enum servoPositions
 {
-	LAUNCHER_GRAB_SPEED   = 100,   //!< The speed to reverse the launcher wheels at to grab the bonus ball.
-	LAUNCHER_LAUNCH_SPEED = 160, //!< The speed to spin the launcher wheels at, when farthest away from the goal.
-	LAUNCHER_STOP         = 128
+	LAUNCHER_GRAB_SPEED   = 160,   //!< The speed to reverse the launcher wheels at to grab the bonus ball.
+	LAUNCHER_LAUNCH_SPEED = 0, //!< The speed to spin the launcher wheels at, when farthest away from the goal.
+	LAUNCHER_STOP         = 127
 };
 
 typedef enum

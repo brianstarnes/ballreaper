@@ -1,8 +1,8 @@
+#include "LCD.h"
 #include "competition.h"
 
 #include "ADC.h"
 #include "bonusbot.h"
-#include "LCD.h"
 #include "motors.h"
 #include "rtc.h"
 #include "serial.h"
@@ -11,26 +11,11 @@
 #include "utility.h"
 
 
-//Local prototypes
-void frontLeft(u08 speed, u08 direction);
-void frontRight(u08 speed, u08 direction);
-void backRight(u08 speed, u08 direction);
-void backLeft(u08 speed, u08 direction);
-void stopMotors();
-void strafeRight(u08 speed);
-void strafeLeft(u08 speed);
-void driveForward(void);
-void driveBackwards(void);
+static void compGrabBonusBall();
 
 static int compState;
 static u08 startTimeSecs;
 
-
-enum direction
-{
-	REVERSE,
-	FORWARD
-};
 
 enum {
 	COMP_DRV_TO_WALL,
@@ -47,85 +32,25 @@ enum {
 void compInit()
 {
 	rtcRestart();
-	startTimeSecs = secCount;
 	driveForward();
 	printString_P(PSTR("Drive Forward"));
 	compState = COMP_DRV_TO_WALL;
-}
-
-void frontLeft(u08 speed, u08 direction)
-{
-	if (direction)
-		servo(SERVO_FRONT_LEFT, 128 - speed);
-	else
-		servo(SERVO_FRONT_LEFT, 128 + speed);
-}
-
-void frontRight(u08 speed, u08 direction)
-{
-	if (direction)
-		servo(SERVO_FRONT_RIGHT, 128 - speed);
-	else
-		servo(SERVO_FRONT_RIGHT, 128 + speed);
-}
-
-void backRight(u08 speed, u08 direction)
-{
-	if (direction)
-		servo(SERVO_BACK_RIGHT, 128 - speed);
-	else
-		servo(SERVO_BACK_RIGHT, 128 + speed);
-}
-
-void backLeft(u08 speed, u08 direction)
-{
-	if (direction)
-		servo(SERVO_BACK_LEFT, 128 - speed);
-	else
-		servo(SERVO_BACK_LEFT, 128 + speed);
-}
-
-void driveForward(void)
-{
-	frontLeft(DRIVE_FAST_SPEED, FORWARD);
-	backLeft(DRIVE_FAST_SPEED, FORWARD);
-	backRight(DRIVE_FAST_SPEED, FORWARD);
-	frontRight(DRIVE_FAST_SPEED, FORWARD);
-}
-
-void driveBackwards(void)
-{
-	frontLeft(DRIVE_SLOW_SPEED, REVERSE);
-	backLeft(DRIVE_SLOW_SPEED, REVERSE);
-	backRight(DRIVE_SLOW_SPEED, REVERSE);
-	frontRight(DRIVE_SLOW_SPEED, REVERSE);
-}
-
-void strafeRight(u08 speed)
-{
-	frontLeft(speed, FORWARD);
-	backLeft(speed, REVERSE);
-	backRight(speed, FORWARD);
-	frontRight(speed, REVERSE);
-}
-
-void strafeLeft(u08 speed)
-{
-	frontLeft(speed, REVERSE);
-	backLeft(speed, FORWARD);
-	backRight(speed, REVERSE);
-	frontRight(speed, FORWARD);
 }
 
 void compExec()
 {
 	u08 leftHit = BB_LEFT_HIT;
 	u08 rightHit = BB_RIGHT_HIT;
+	u08 backLeftHit = BB_BACK_LEFT_HIT;
+	u08 backRightHit = BB_BACK_RIGHT_HIT;
 
 	switch (compState) {
 		case COMP_DRV_TO_WALL:
 			if (leftHit && rightHit)
 			{
+				clearScreen();
+				printString_P(PSTR("Slide right"));
+				startTimeSecs = secCount;
 				compState = COMP_SLIDE_RIGHT_TO_LINE;
 			}
 			else if (leftHit)
@@ -147,56 +72,118 @@ void compExec()
 		case COMP_SLIDE_RIGHT_TO_LINE:
 			strafeRight(DRIVE_FAST_SPEED);
 
-			if ((qrdFrontLeftReading > 200) && (qrdFrontRightReading > 200))
+			// TODO base this off of line sensors...
+			if ((secCount - startTimeSecs) > 2)
 			{
-				stopMotors();
-				if ((qrdFrontLeftReading > 200) && (qrdFrontRightReading > 200))
-				  compState = COMP_GRAB_BONUS_BALL;
-				else
-				{
-					strafeLeft(DRIVE_SLOW_SPEED);
-					if ((qrdFrontLeftReading > 200) && (qrdFrontRightReading > 200))
-					{
-						stopMotors();
-						compState = COMP_GRAB_BONUS_BALL;
-					}
-				}
+				compGrabBonusBall();
+				compState = COMP_GRAB_BONUS_BALL;
 			}
+//			if ((qrdFrontLeftReading > 200) && (qrdFrontRightReading > 200))
+//			{
+//				stopMotors();
+//				if ((qrdFrontLeftReading > 200) && (qrdFrontRightReading > 200))
+//				  compState = COMP_GRAB_BONUS_BALL;
+//				else
+//				{
+//					strafeLeft(DRIVE_SLOW_SPEED);
+//					if ((qrdFrontLeftReading > 200) && (qrdFrontRightReading > 200))
+//					{
+//						stopMotors();
+//						compState = COMP_GRAB_BONUS_BALL;
+//					}
+//				}
+//			}
 			break;
 
 		case COMP_GRAB_BONUS_BALL:
-			//TODO: Turn on relay to suck in ball...
-			launcherSpeed(LAUNCHER_GRAB_SPEED);
+			// wait a few seconds to grab the ball.
+			if ((secCount - startTimeSecs) > 15)
+			{
+				clearScreen();
+				printString_P(PSTR("Drive backwards"));
+				vacuumOff();
+				compState = COMP_DRV_BACK;
+			}
 			break;
 
 		case COMP_DRV_BACK:
-			//TODO: Drive backward until we hit the back switches...
-			//driveBackwards();
+			driveBackwards();
 
-			//if (backWallHit)
-				//compState = COMP_STRAFE_RIGHT;
+			if (backLeftHit || backRightHit)
+			{
+				startTimeSecs = secCount;
+				clearScreen();
+				printString_P(PSTR("Strafe Right"));
+				compState = COMP_STRAFE_RIGHT;
+			}
 			break;
 
 		case COMP_STRAFE_RIGHT:
 			strafeRight(DRIVE_SLOW_SPEED);
+
 			//TODO: Strafe until both back sensors are off the line and go back the other way...
 			// once time is low setup money shot.
+
+			if (secCount > 30)
+			{
+				startTimeSecs = secCount;
+				clearScreen();
+				printString_P(PSTR("Setup shot"));
+				compState = COMP_STRAFE_LEFT;
+			}
+			else if ((secCount - startTimeSecs) > 2)
+			{
+				startTimeSecs = secCount;
+				clearScreen();
+				printString_P(PSTR("Strafe Left"));
+				compState = COMP_SET_UP_MONEY_SHOT;
+			}
 			break;
 
 		case COMP_STRAFE_LEFT:
 			strafeLeft(DRIVE_SLOW_SPEED);
+
 			//TODO: Strafe until sensors cross black line and go off and go back the other way...
 			// once time is low setup money shot.
+			if (secCount > 30)
+			{
+				startTimeSecs = secCount;
+				clearScreen();
+				printString_P(PSTR("Setup shot"));
+				compState = COMP_SET_UP_MONEY_SHOT;
+			}
+			else if ((secCount - startTimeSecs) > 2)
+			{
+				startTimeSecs = secCount;
+				clearScreen();
+				printString_P(PSTR("Strafe Right"));
+				compState = COMP_STRAFE_LEFT;
+			}
 			break;
 
 		case COMP_SET_UP_MONEY_SHOT:
+			launcherSpeed(LAUNCHER_LAUNCH_SPEED);
+
+			if ((secCount - startTimeSecs) > 2)
+			{
+				startTimeSecs = secCount;
+				clearScreen();
+				printString_P(PSTR("Shoot Ball"));
+				compState = COMP_SHOOT_BALL;
+			}
 			//Strafe back to the middle drive forward and shoot
 			break;
 
 		case COMP_SHOOT_BALL:
-			launcherSpeed(LAUNCHER_LAUNCH_SPEED);
-			delayMs(500);
-			//TODO: Turn on relay to shoot the ball...
+			vacuumOn();
+
+
+			if ((secCount - startTimeSecs) > 2)
+			{
+				clearScreen();
+				printString_P(PSTR("Fuck yeah!"));
+				compState = COMP_DONE;
+			}
 			break;
 
 		case COMP_DONE:
@@ -205,4 +192,13 @@ void compExec()
 	}
 } // End competition
 
+static void compGrabBonusBall()
+{
+	clearScreen();
+	printString_P(PSTR("Grab ball"));
+	startTimeSecs = secCount;
+	stopMotors();
+	vacuumOn();
+	launcherSpeed(LAUNCHER_GRAB_SPEED);
+}
 
