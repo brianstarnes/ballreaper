@@ -22,6 +22,7 @@ static u08 startTimeSecs;
 enum {
 	COMP_LAUNCHER_SPINUP,
 	COMP_COLLECT_DRV_FWD,
+	COMP_EMPTY_HOPPER,
 	COMP_COLLECT_DRV_BACK,
 	COMP_DONE
 };
@@ -40,6 +41,7 @@ void compLeftExec()
 		case COMP_LAUNCHER_SPINUP:
 			if ((secCount - startTimeSecs) > 2) {
 				resetEncoders();
+				startTimeSecs = secCount;
 				compCollectFwd();
 
 				compState = COMP_COLLECT_DRV_FWD;
@@ -47,11 +49,11 @@ void compLeftExec()
 			break;
 
 		case COMP_COLLECT_DRV_FWD:
-			if (LFRONT_HIT /*|| (secCount - startTimeSecs) > 18*/)
+			if (LFRONT_HIT || (secCount - startTimeSecs) > 25)
 			{
-				compCollectBack();
+				compEmptyHopper();
 				startTimeSecs = secCount;
-				compState = COMP_COLLECT_DRV_BACK;
+				compState = COMP_EMPTY_HOPPER;
 			}
 			else {
 				/* Pause every couple ticks to give the feeder and shooter time to get rid
@@ -68,8 +70,17 @@ void compLeftExec()
 			}
 			break;
 
+		case COMP_EMPTY_HOPPER:
+			if ((secCount - startTimeSecs) > 5)
+			{
+				compCollectBack();
+				startTimeSecs = secCount;
+				compState = COMP_COLLECT_DRV_BACK;
+			}
+			break;
+
 		case COMP_COLLECT_DRV_BACK:
-			if (LBACK_HIT /*|| (secCount - startTimeSecs) > 6*/)
+			if (LBACK_HIT || (secCount - startTimeSecs) > 20)
 			{
 				refills++;
 				stop();

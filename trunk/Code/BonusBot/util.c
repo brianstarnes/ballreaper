@@ -96,10 +96,10 @@ void backLeft(u08 speed, u08 direction)
 
 void driveForward(void)
 {
-	frontLeft(DRIVE_FAST_SPEED, FORWARD);
-	backLeft(DRIVE_FAST_SPEED, FORWARD);
-	backRight(DRIVE_FAST_SPEED, FORWARD);
-	frontRight(DRIVE_FAST_SPEED, FORWARD);
+	frontLeft(DRIVE_SLOW_SPEED, FORWARD);
+	backLeft(DRIVE_SLOW_SPEED, FORWARD);
+	backRight(DRIVE_SLOW_SPEED, FORWARD);
+	frontRight(DRIVE_SLOW_SPEED, FORWARD);
 }
 
 void driveBackwards(void)
@@ -114,8 +114,8 @@ void strafeRight(u08 speed)
 {
 	frontLeft(speed, FORWARD);
 	backLeft(speed, REVERSE);
-	backRight(speed, FORWARD);
-	frontRight(speed, REVERSE);
+	backRight(speed, REVERSE);
+	frontRight(speed, FORWARD);
 }
 
 void strafeLeft(u08 speed)

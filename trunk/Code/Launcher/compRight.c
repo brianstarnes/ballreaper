@@ -21,6 +21,7 @@ enum {
 	COMP_DRIVE_FORWARD,
 	COMP_TURN_LEFT,
 	COMP_COLLECT_DRV_FWD,
+	COMP_EMPTY_HOPPER,
 	COMP_COLLECT_DRV_BACK,
 	COMP_WAIT_REFILL,
 	COMP_DONE
@@ -33,8 +34,6 @@ static u08 startTimeSecs;
 void compRightInit()
 {
 	rtcRestart();
-
-	configPacketProcessor(&validateLauncherPacket, &execLauncherPacket, LAST_UplinkPacketType - 1);
 
 	resetEncoders();
 	compStart();
@@ -95,11 +94,11 @@ void compRightExec()
 			break;
 
 		case COMP_COLLECT_DRV_FWD:
-			if (FRONT_HIT || (secCount - startTimeSecs) > 18)
+			if (FRONT_HIT || (secCount - startTimeSecs) > 25)
 			{
-				compCollectBack();
+				compEmptyHopper();
 				startTimeSecs = secCount;
-				compState = COMP_COLLECT_DRV_BACK;
+				compState = COMP_EMPTY_HOPPER;
 			}
 			else
 			{
@@ -118,8 +117,17 @@ void compRightExec()
 			}
 			break;
 
+		case COMP_EMPTY_HOPPER:
+			if ((secCount - startTimeSecs) > 5)
+			{
+				compCollectBack();
+				startTimeSecs = secCount;
+				compState = COMP_COLLECT_DRV_BACK;
+			}
+			break;
+
 		case COMP_COLLECT_DRV_BACK:
-			if (BACK_RIGHT_HIT || BACK_LEFT_HIT || (secCount - startTimeSecs) > 12)
+			if (BACK_RIGHT_HIT || BACK_LEFT_HIT || (secCount - startTimeSecs) > 20)
 			{
 				stop();
 				refills++;
@@ -142,6 +150,7 @@ void compRightExec()
 			break;
 
 		case COMP_WAIT_REFILL:
+			stop();
 			pidStop = TRUE;
 			if ((secCount - startTimeSecs) > 15)
 			{

@@ -82,7 +82,7 @@ enum servoPositions
 	FEEDER_RUNNING         = 200,
 	LAUNCHER_SPEED_STOPPED = 128, //!< The center servo setting that the RoboClaw interprets as stopped.
 	LAUNCHER_SPEED_NEAR    = 150, //!< The minimum speed to spin the launcher wheels at, when closest to the goal.
-	LAUNCHER_SPEED_FAR     = 150,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
+	LAUNCHER_SPEED_FAR     = 155,  //!< The maximum speed to spin the launcher wheels at, when farthest away from the goal.
 };
 
 typedef enum
@@ -135,6 +135,12 @@ enum motorSpeeds
 	SLOW_SPEED_BK_WALL_WHEEL  = 13,
 	TURN_SPEED_INNER_WHEEL    = 45,
 	TURN_SPEED_WALL_WHEEL     = 45
+};
+
+//RobotID
+enum {
+	ROBOTID_LEFT,
+	ROBOTID_RIGHT
 };
 
 //Prototypes
