@@ -16,6 +16,9 @@
 #include "utility.h"
 #include <avr/pgmspace.h>
 
+//globals
+u08 robotID;
+
 //Local variables
 volatile u16 innerEncoderTicks = 0;
 volatile u16 totalInnerEncoderTicks = 0;
@@ -61,8 +64,19 @@ int main()
 	//enable pullup resistors for all 8 analog inputs
 	analogPullups(0xFF);
 
-	//print firmware version and wait for button press
+	//read and save RobotID
+	if (LEFT_ROBOT_ID)
+		robotID = LEFT_ROBOT;
+	else
+		robotID = RIGHT_ROBOT;
+
+	//print firmware version and robot ID
 	printString_P(PSTR("ballReaper v" LAUNCHER_FIRMWARE_VERSION));
+	lowerLine();
+	if (robotID == LEFT_ROBOT)
+		printString_P(PSTR("Left Robot"));
+	else
+		printString_P(PSTR("Right Robot"));
 	delayMs(1000);
 
 	//Start taking ADC readings
@@ -143,7 +157,7 @@ static void mainMenu()
 	switch (choice)
 	{
 		case Option_RunCompetition:
-			if (LEFT_ROBOT_ID)
+			if (robotID == LEFT_ROBOT)
 			{
 				pProgInit = compLeftInit;
 				pProgExec = compLeftExec;

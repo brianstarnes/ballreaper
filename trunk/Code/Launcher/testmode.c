@@ -49,10 +49,10 @@ void testModeExec()
 				printString_P(PSTR("Voltage, Reading"));
 				break;
 			case TEST_Switches:
-				if (LEFT_ROBOT_ID)
+				if (robotID == LEFT_ROBOT)
 					printString_P(PSTR("SW:B SB SF F"));
 				else
-				  printString_P(PSTR("SW:BL BR SB SF F"));
+				  printString_P(PSTR(" P BL BR SB SF F"));
 				break;
 			case TEST_EncoderTicks:
 				printString_P(PSTR("W EncoderTicks I"));
@@ -81,7 +81,7 @@ void testModeExec()
 					print_u16(batteryReading);
 					break;
 				case TEST_Switches:
-					if (LEFT_ROBOT_ID)
+					if (robotID == LEFT_ROBOT)
 					{
 						lcdCursor(1, 3);
 						printChar(digitalInput(LSWITCH_BACK) + '0');
@@ -94,6 +94,8 @@ void testModeExec()
 					}
 					else
 					{
+						lcdCursor(1, 1);
+						printChar(digitalInput(SWITCH_PIVOT) + '0');
 						lcdCursor(1, 3);
 						printChar(digitalInput(SWITCH_BACK_WALL_LEFT) + '0');
 						lcdCursor(1, 6);
