@@ -14,7 +14,7 @@
 #include "utility.h"
 
 static int compState;
-static u08 refills = 0;
+static u08 passes = 0;
 //static u08 launcherMotorSpeed;
 static u08 startTimeSecs;
 
@@ -87,31 +87,32 @@ void compLeftExec()
 		case COMP_EMPTY_HOPPER:
 			if ((secCount - startTimeSecs) > 5)
 			{
-				compCollectBack();
-				startTimeSecs = secCount;
-				compState = COMP_COLLECT_DRV_BACK;
-			}
-			break;
-
-		case COMP_COLLECT_DRV_BACK:
-			if (PRESSED(dBackRight) || (secCount - startTimeSecs) > 10)
-			{
-				refills++;
-				stop();
-				clearScreen();
-				printString_P(PSTR("Waiting 4 reload"));
-				delayMs(15000);
-				if (refills == 6)
+				passes++;
+				if (passes == 3)
 				{
 					compDone();
 					compState = COMP_DONE;
 				}
 				else
 				{
-					compCollectFwd();
+					compCollectBack();
 					startTimeSecs = secCount;
-					compState = COMP_COLLECT_DRV_FWD;
+					compState = COMP_COLLECT_DRV_BACK;
 				}
+			}
+			break;
+
+		case COMP_COLLECT_DRV_BACK:
+			if (PRESSED(dBackRight) || (secCount - startTimeSecs) > 10)
+			{
+				stop();
+				clearScreen();
+				printString_P(PSTR("Waiting 4 reload"));
+				delayMs(10000);
+
+				compCollectFwd();
+				startTimeSecs = secCount;
+				compState = COMP_COLLECT_DRV_FWD;
 			}
 			else
 			{

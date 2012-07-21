@@ -28,7 +28,7 @@ enum {
 };
 
 static int compState;
-static u08 refills = 0;
+static u08 passes = 0;
 static u08 startTimeSecs;
 
 void compRightInit()
@@ -129,9 +129,18 @@ void compRightExec()
 		case COMP_EMPTY_HOPPER:
 			if ((secCount - startTimeSecs) > 5)
 			{
-				compCollectBack();
-				startTimeSecs = secCount;
-				compState = COMP_COLLECT_DRV_BACK;
+				passes++;
+				if (passes == 3)
+				{
+					compDone();
+					compState = COMP_DONE;
+				}
+				else
+				{
+					compCollectBack();
+					startTimeSecs = secCount;
+					compState = COMP_COLLECT_DRV_BACK;
+				}
 			}
 			break;
 
@@ -139,18 +148,9 @@ void compRightExec()
 			if (PRESSED(dBackRight) || PRESSED(dBackLeft) || (secCount - startTimeSecs) > 10)
 			{
 				stop();
-				refills++;
-				if (refills == 6)
-				{
-					compDone();
-					compState = COMP_DONE;
-				}
-				else
-				{
-					compWaitRefill();
-					startTimeSecs = secCount;
-					compState = COMP_WAIT_REFILL;
-				}
+				compWaitRefill();
+				startTimeSecs = secCount;
+				compState = COMP_WAIT_REFILL;
 			}
 			else
 			{
