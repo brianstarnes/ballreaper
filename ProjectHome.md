@@ -1,0 +1,1 @@
+An autonomous robot system to reap ping pong balls and shoot them into into the opponent's net.
